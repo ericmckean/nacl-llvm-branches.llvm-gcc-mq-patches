@@ -3,14 +3,14 @@
 # Date 1305932917 25200
 # Branch pnacl-sfi
 # Node ID 9747397423656946cbb9324cef3fe9d5c74a5a58
-# Parent 5923c9aaed8567c47fc79b1d198a42bc0463734e
+# Parent 92b00c4ff820ebb919b58e74db242c87d587a0e4
 Make va_list 16-bytes instead of 24-bytes in llvm-gcc
 
  From llvm-gcc-pnacl-0004-76-9747397423656946cbb9324cef3fe9d5c74a5a58.patch
 
-diff -r 5923c9aaed85 gcc/tree.c
+diff -r 92b00c4ff820 gcc/tree.c
 --- a/gcc/tree.c	Wed May 18 13:53:00 2011 -0700
-+++ b/gcc/tree.c	Mon Jun 13 17:56:00 2011 -0700
++++ b/gcc/tree.c	Tue Jun 14 16:57:43 2011 -0700
 @@ -6748,11 +6748,11 @@
        {
          /* If not expanding va_arg, make va_list large enough
