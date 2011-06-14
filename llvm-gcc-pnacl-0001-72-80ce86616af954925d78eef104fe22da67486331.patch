@@ -1,0 +1,153 @@
+# HG changeset patch
+# User David Sehr <sehr@google.com>
+# Date 1299527355 28800
+# Branch pnacl-sfi
+# Node ID 80ce86616af954925d78eef104fe22da67486331
+# Parent 7d1f659ac4b8e142a5c3b9251d6aac38ee28f9bb
+llvm-gcc changes to add intrinsics for elf starting, setjmp, and longjmp.
+http://codereview.chromium.org/6591043/
+
+ From llvm-gcc-pnacl-0001-72-80ce86616af954925d78eef104fe22da67486331.patch
+
+diff -r 7d1f659ac4b8 gcc/builtins.def
+--- a/gcc/builtins.def	Mon Jun 13 17:55:32 2011 -0700
++++ b/gcc/builtins.def	Mon Jun 13 17:55:35 2011 -0700
+@@ -767,3 +767,13 @@
+ 
+ /* OpenMP builtins.  */
+ #include "omp-builtins.def"
++
++/* @LOCALMOD-BEGIN */
++#define DEF_NACL_BUILTIN(ENUM, NAME, TYPE, ATTRS)		\
++  DEF_BUILTIN (ENUM, "__builtin_" NAME, BUILT_IN_NORMAL, TYPE, TYPE,	\
++	       false, false, true, ATTRS, false, true)
++
++DEF_NACL_BUILTIN(BUILT_IN_NACL_ELF_START, "nacl_elf_start", BT_FN_VOID_PTR, ATTR_NORETURN_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
++/* @LOCALMOD-END */
+diff -r 7d1f659ac4b8 gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Mon Jun 13 17:55:32 2011 -0700
++++ b/gcc/llvm-convert.cpp	Mon Jun 13 17:55:35 2011 -0700
+@@ -6312,6 +6312,20 @@
+       return true;
+     }
+ #endif  // FIXME: Should handle these GCC extensions eventually.
++
++  // @LOCALMOD-BEGIN
++  case BUILT_IN_NACL_ELF_START:
++    Result = EmitNaClElfStart(exp);
++    return true;
++
++  case BUILT_IN_NACL_SETJMP:
++    Result = EmitNaClSetjmp(exp);
++    return true;
++
++  case BUILT_IN_NACL_LONGJMP:
++    Result = EmitNaClLongjmp(exp);
++    return true;
++  // @LOCALMOD-END
+   }
+   return false;
+ }
+@@ -8191,6 +8205,77 @@
+   return ConstantStruct::get(Context, ResultElts, false);
+ }
+ 
++// @LOCALMOD-BEGIN
++Value *TreeToLLVM::EmitNaClElfStart(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, POINTER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_elf_start' should take pointer");
++  }
++
++  Value *NaClStartFunc = Emit(TREE_VALUE(ArgList), 0);
++  NaClStartFunc = BitCastToType(NaClStartFunc, Type::getInt8PtrTy(Context));
++  SmallVector<Value *, 1> Args;
++  Args.push_back(NaClStartFunc);
++
++  Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
++                                               Intrinsic::nacl_elf_start),
++                     Args.begin(), Args.end());
++  return 0;
++}
++
++Value *TreeToLLVM::EmitNaClSetjmp(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, POINTER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_setjmp' should take pointer");
++  }
++
++  Value *JmpBuf = Emit(TREE_VALUE(ArgList), 0);
++  JmpBuf = BitCastToType(JmpBuf, Type::getInt8PtrTy(Context));
++  Constant *Level = ConstantInt::get(Type::getInt32Ty(Context), 0);
++  SmallVector<Value *, 1> RetAddrArgs;
++  RetAddrArgs.push_back(Level);
++  Value *RetAddr =
++      Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
++                                                   Intrinsic::returnaddress),
++                                                   RetAddrArgs.begin(),
++                                                   RetAddrArgs.end());
++  SmallVector<Value *, 2> Args;
++  Args.push_back(JmpBuf);
++  Args.push_back(RetAddr);
++
++  Value* Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(TheModule,
++                                              Intrinsic::nacl_setjmp),
++                    Args.begin(), Args.end());
++  return Call;
++}
++
++Value *TreeToLLVM::EmitNaClLongjmp(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, POINTER_TYPE, INTEGER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_longjmp' should take pointer, int");
++  }
++
++  Value *JmpBuf = Emit(TREE_VALUE(ArgList), 0);
++  JmpBuf = BitCastToType(JmpBuf, Type::getInt8PtrTy(Context));
++  Value *RetVal = Emit(TREE_VALUE(TREE_CHAIN(ArgList)), 0);
++  SmallVector<Value *, 2> Args;
++  Args.push_back(JmpBuf);
++  Args.push_back(RetVal);
++
++  Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
++                                               Intrinsic::nacl_longjmp),
++                     Args.begin(), Args.end());
++  // Emit an explicit unreachable instruction.
++  Builder.CreateUnreachable();
++  EmitBlock(BasicBlock::Create(Context, ""));
++  return 0;
++}
++// @LOCALMOD-END
++
+ 
+ namespace {
+ /// ConstantLayoutInfo - A helper class used by ConvertRecordCONSTRUCTOR to
+@@ -8956,5 +9041,4 @@
+          "It's a bitfield reference or we didn't get to the field!");
+   return FieldPtr;
+ }
+-
+ /* LLVM LOCAL end (ENTIRE FILE!)  */
+diff -r 7d1f659ac4b8 gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Mon Jun 13 17:55:32 2011 -0700
++++ b/gcc/llvm-internal.h	Mon Jun 13 17:55:35 2011 -0700
+@@ -614,6 +614,13 @@
+   Value *EmitREAL_CST(tree_node *exp);
+   Value *EmitCONSTRUCTOR(tree_node *exp, const MemRef *DestLoc);
+ 
++  // @LOCALMOD-BEGIN
++  // NativeClient intrinsics.
++  Value *EmitNaClElfStart(tree_node *exp);
++  Value *EmitNaClSetjmp(tree_node *exp);
++  Value *EmitNaClLongjmp(tree_node *exp);
++  // @LOCALMOD-END
++
+   // Optional target defined builtin intrinsic expanding function.
+   bool TargetIntrinsicLower(tree_node *exp,
+                             unsigned FnCode,

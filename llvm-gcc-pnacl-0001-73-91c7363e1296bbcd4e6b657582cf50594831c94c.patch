@@ -1,0 +1,209 @@
+# HG changeset patch
+# User David Sehr <sehr@google.com>
+# Date 1300462489 25200
+# Branch pnacl-sfi
+# Node ID 91c7363e1296bbcd4e6b657582cf50594831c94c
+# Parent 3d9b666dc07be4550c6f084da63fd2c48326b5c3
+Add intrinsics for TLS support to remove src/untrusted/stubs/crt_*.S
+BUG=http://code.google.com/p/nativeclient/issues/detail?id=1519
+TEST=none (yet)
+
+ From llvm-gcc-pnacl-0001-73-91c7363e1296bbcd4e6b657582cf50594831c94c.patch
+
+diff -r 3d9b666dc07b gcc/builtin-types.def
+--- a/gcc/builtin-types.def	Mon Mar 07 11:49:15 2011 -0800
++++ b/gcc/builtin-types.def	Mon Jun 13 17:55:48 2011 -0700
+@@ -141,6 +141,10 @@
+ DEF_FUNCTION_TYPE_0 (BT_FN_DFLOAT32, BT_DFLOAT32)
+ DEF_FUNCTION_TYPE_0 (BT_FN_DFLOAT64, BT_DFLOAT64)
+ DEF_FUNCTION_TYPE_0 (BT_FN_DFLOAT128, BT_DFLOAT128)
++/* @LOCALMOD-BEGIN */
++/* For PNaCl we need functions that return a size_t but take no parameters. */
++DEF_FUNCTION_TYPE_0 (BT_FN_SIZE, BT_SIZE)
++/* @LOCALMOD-END */
+ 
+ DEF_FUNCTION_TYPE_1 (BT_FN_LONG_LONG, BT_LONG, BT_LONG)
+ DEF_FUNCTION_TYPE_1 (BT_FN_LONGLONG_LONGLONG, BT_LONGLONG, BT_LONGLONG)
+@@ -212,6 +216,10 @@
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT32_UINT32, BT_UINT32, BT_UINT32)
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT64_UINT64, BT_UINT64, BT_UINT64)
+ /* APPLE LOCAL end mainline bswap */
++/* @LOCALMOD-BEGIN */
++/* For PNaCl we need functions that return a size_t but take no parameters. */
++DEF_FUNCTION_TYPE_1 (BT_FN_SIZE_SIZE, BT_SIZE, BT_SIZE)
++/* @LOCALMOD-END */
+ 
+ DEF_POINTER_TYPE (BT_PTR_FN_VOID_PTR, BT_FN_VOID_PTR)
+ 
+diff -r 3d9b666dc07b gcc/builtins.def
+--- a/gcc/builtins.def	Mon Mar 07 11:49:15 2011 -0800
++++ b/gcc/builtins.def	Mon Jun 13 17:55:48 2011 -0700
+@@ -774,6 +774,13 @@
+ 	       false, false, true, ATTRS, false, true)
+ 
+ DEF_NACL_BUILTIN(BUILT_IN_NACL_ELF_START, "nacl_elf_start", BT_FN_VOID_PTR, ATTR_NORETURN_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_READ_TP, "nacl_read_tp", BT_FN_PTR, ATTR_NOTHROW_LIST)
+ DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
+ DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
++
++/* Thread local storage support intrinsics. */
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TLS_ALIGNMENT, "nacl_tls_alignment", BT_FN_INT, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TDB_OFFSET_IN_TLS, "nacl_tdb_offset_in_tls", BT_FN_SIZE_SIZE, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TDB_EFFECTIVE_PAYLOAD_SIZE, "nacl_tdb_effective_payload_size", BT_FN_SIZE_SIZE, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_RETURN_ADDRESS_SIZE, "nacl_return_address_size", BT_FN_SIZE, ATTR_NOTHROW_LIST)
+ /* @LOCALMOD-END */
+diff -r 3d9b666dc07b gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Mon Mar 07 11:49:15 2011 -0800
++++ b/gcc/llvm-convert.cpp	Mon Jun 13 17:55:48 2011 -0700
+@@ -6325,6 +6325,22 @@
+   case BUILT_IN_NACL_LONGJMP:
+     Result = EmitNaClLongjmp(exp);
+     return true;
++
++  case BUILT_IN_NACL_TLS_ALIGNMENT:
++    Result = EmitNaClTlsAlignment(exp);
++    return true;
++
++  case BUILT_IN_NACL_TDB_OFFSET_IN_TLS:
++    Result = EmitNaClTdbOffsetInTls(exp);
++    return true;
++
++  case BUILT_IN_NACL_TDB_EFFECTIVE_PAYLOAD_SIZE:
++    Result = EmitNaClTdbEffectivePayloadSize(exp);
++    return true;
++
++  case BUILT_IN_NACL_RETURN_ADDRESS_SIZE:
++    Result = EmitNaClReturnAddressSize(exp);
++    return true;
+   // @LOCALMOD-END
+   }
+   return false;
+@@ -8215,12 +8231,10 @@
+ 
+   Value *NaClStartFunc = Emit(TREE_VALUE(ArgList), 0);
+   NaClStartFunc = BitCastToType(NaClStartFunc, Type::getInt8PtrTy(Context));
+-  SmallVector<Value *, 1> Args;
+-  Args.push_back(NaClStartFunc);
+ 
+   Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
+                                                Intrinsic::nacl_elf_start),
+-                     Args.begin(), Args.end());
++                     NaClStartFunc);
+   return 0;
+ }
+ 
+@@ -8234,21 +8248,15 @@
+   Value *JmpBuf = Emit(TREE_VALUE(ArgList), 0);
+   JmpBuf = BitCastToType(JmpBuf, Type::getInt8PtrTy(Context));
+   Constant *Level = ConstantInt::get(Type::getInt32Ty(Context), 0);
+-  SmallVector<Value *, 1> RetAddrArgs;
+-  RetAddrArgs.push_back(Level);
+-  Value *RetAddr =
+-      Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
+-                                                   Intrinsic::returnaddress),
+-                                                   RetAddrArgs.begin(),
+-                                                   RetAddrArgs.end());
+-  SmallVector<Value *, 2> Args;
+-  Args.push_back(JmpBuf);
+-  Args.push_back(RetAddr);
+-
+-  Value* Call = Builder.CreateCall(
++  Value *RetAddr = Builder.CreateCall(
++                       Intrinsic::getDeclaration(TheModule,
++                                                 Intrinsic::returnaddress),
++                       Level);
++
++  Value* Call = Builder.CreateCall2(
+                     Intrinsic::getDeclaration(TheModule,
+                                               Intrinsic::nacl_setjmp),
+-                    Args.begin(), Args.end());
++                    JmpBuf, RetAddr);
+   return Call;
+ }
+ 
+@@ -8262,18 +8270,64 @@
+   Value *JmpBuf = Emit(TREE_VALUE(ArgList), 0);
+   JmpBuf = BitCastToType(JmpBuf, Type::getInt8PtrTy(Context));
+   Value *RetVal = Emit(TREE_VALUE(TREE_CHAIN(ArgList)), 0);
+-  SmallVector<Value *, 2> Args;
+-  Args.push_back(JmpBuf);
+-  Args.push_back(RetVal);
+-
+-  Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
+-                                               Intrinsic::nacl_longjmp),
+-                     Args.begin(), Args.end());
++
++  Builder.CreateCall2(Intrinsic::getDeclaration(TheModule,
++                                                Intrinsic::nacl_longjmp),
++                      JmpBuf, RetVal);
+   // Emit an explicit unreachable instruction.
+   Builder.CreateUnreachable();
+   EmitBlock(BasicBlock::Create(Context, ""));
+   return 0;
+ }
++
++Value *TreeToLLVM::EmitNaClTlsAlignment(tree_node *exp) {
++  Value *Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(TheModule,
++                                              Intrinsic::nacl_tls_alignment));
++  return Call;
++}
++
++Value *TreeToLLVM::EmitNaClTdbOffsetInTls(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, INTEGER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_offset_in_tls' should take int");
++  }
++
++  Value *TlsDataAndBssSize = Emit(TREE_VALUE(ArgList), 0);
++
++  Value *Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(
++                        TheModule,
++                        Intrinsic::nacl_tdb_offset_in_tls),
++                    TlsDataAndBssSize);
++  return Call;
++}
++
++Value *TreeToLLVM::EmitNaClTdbEffectivePayloadSize(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, INTEGER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_tdb_effective_payload_size' should take int");
++  }
++
++  Value *TdbSize = Emit(TREE_VALUE(ArgList), 0);
++
++  Value *Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(
++                        TheModule,
++                        Intrinsic::nacl_tdb_effective_payload_size),
++                    TdbSize);
++  return Call;
++}
++
++Value *TreeToLLVM::EmitNaClReturnAddressSize(tree_node *exp) {
++  Value *Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(
++                        TheModule,
++                        Intrinsic::nacl_return_address_size));
++  return Call;
++}
+ // @LOCALMOD-END
+ 
+ 
+diff -r 3d9b666dc07b gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Mon Mar 07 11:49:15 2011 -0800
++++ b/gcc/llvm-internal.h	Mon Jun 13 17:55:48 2011 -0700
+@@ -619,6 +619,10 @@
+   Value *EmitNaClElfStart(tree_node *exp);
+   Value *EmitNaClSetjmp(tree_node *exp);
+   Value *EmitNaClLongjmp(tree_node *exp);
++  Value *EmitNaClTlsAlignment(tree_node *exp);
++  Value *EmitNaClTdbOffsetInTls(tree_node *exp);
++  Value *EmitNaClTdbEffectivePayloadSize(tree_node *exp);
++  Value *EmitNaClReturnAddressSize(tree_node *exp);
+   // @LOCALMOD-END
+ 
+   // Optional target defined builtin intrinsic expanding function.

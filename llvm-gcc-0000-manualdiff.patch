@@ -1,0 +1,3238 @@
+Initial import of 71:a24f3ae473c81f0b495003a0833d3d1d8b56b3d4 to svnrev(124444)
+
+ From llvm-gcc-0000-manualdiff.patch
+
+diff -r 8405d3453566 configure
+--- a/configure	Thu Jan 27 21:38:44 2011 +0000
++++ b/configure	Mon Jun 13 17:55:14 2011 -0700
+@@ -2681,6 +2681,14 @@
+ # $build_configdirs and $target_configdirs.
+ # If we have the source for $noconfigdirs entries, add them to $notsupp.
+ 
++# @LOCALMOD-START disable a bunch of libs we do not want for pnacl
++# we either do not need them or we build them as bitcode in a separate step
++#
++# There seems to be no good way to avoid building them in a less invasive
++# fashion, e.g. configure args or makefile targets
++noconfigdirs="$noconfigdirs target-libiberty target-libstdc++-v3"
++# @LOCALMOD-STOP
++
+ notsupp=""
+ for dir in . $skipdirs $noconfigdirs ; do
+   dirname=`echo $dir | sed -e s/target-//g -e s/build-//g`
+diff -r 8405d3453566 extras/build-darwin-x-mingw32-x-armeabi
+--- a/extras/build-darwin-x-mingw32-x-armeabi	Thu Jan 27 21:38:44 2011 +0000
++++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,510 +0,0 @@
+-#!/bin/bash
+-
+-set -e                     # Terminate script at the first line that fails.
+-set -o pipefail            # Return the first non-zero pipe command error.
+-set -x                     # Print commands as they are executed
+-
+-# This script performs a 3 stages automated build on x86_64-apple-darwin10
+-# of LLVM mingw32 cross-toolchain for arm-eabi hardfloat.
+-# To do so it builds dependencies for this canadian cross as the first 2 stages
+-#
+-# Stage 1: Builds x86_64-apple-darwin10 cross for i686-pc-mingw32 as
+-# --build=x86_64-apple-darwin10
+-# --host=x86_64-apple-darwin10
+-# --target=i686-pc-mingw32
+-#
+-# Stage 2: Builds x86_64-apple-darwin10 cross for arm-eabi hardfloat as
+-# --build=x86_64-apple-darwin10
+-# --host=x86_64-apple-darwin10
+-# --target=arm-eabi
+-#
+-# Stage 3: Using the cross tool-chains from stages 1 and 2 builds
+-#          i686-pc-mingw32 cross for i686-pc-mingw32 as
+-# --build=x86_64-apple-darwin10
+-# --host=i686-pc-mingw32
+-# --target=arm-eabi
+-
+-# This script assumes the valid native compiler for x86_64-apple-darwin10
+-# is in place and available as well as cross tools, libraries and
+-# headers for mingw and arm-eabi.
+-
+-# The usage:
+-# Run this build from the build from the build root directory as
+-# build-darwin-x-mingw32-x-armeabi [<step>] [<extra args>]
+-
+-# Expected project tree structure:
+-# <build root>
+-#    +-- ${LLVM_src}
+-#    +-- ${LLVM_GCC_src}
+-#    +-- ${LLVM_obj_1}        # llvm build directory (stage 1).
+-#    +-- ${LLVM_GCC_obj_1}    # llvm-gcc build directory (stage 1).
+-#    +-- ${LLVM_obj_2}        # llvm build directory (stage 2).
+-#    +-- ${LLVM_GCC_obj_2}    # llvm-gcc build directory (stage 2).
+-#    +-- ${LLVM_obj_3}        # llvm build directory (stage 3).
+-#    +-- ${LLVM_GCC_obj_3}    # llvm-gcc build directory (stage 3).
+-#    +-- ${INSTALL}           # Install directory.
+-
+-LLVM_src=llvm.src             # The LLVM source code root directory name.
+-LLVM_GCC_src=llvm-gcc.src     # The LLVM-GCC source code root directory name.
+-
+-LLVM_obj_1=llvm_1.obj         # The LLVM build root directory for stage1.
+-LLVM_GCC_obj_1=llvm-gcc_1.obj # The LLVM-GCC build root directory for stage1.
+-
+-LLVM_obj_2=llvm_2.obj         # The LLVM build root directory for stage2.
+-LLVM_GCC_obj_2=llvm-gcc_2.obj # The LLVM-GCC build root directory for stage2.
+-
+-LLVM_obj_3=llvm_3.obj         # The LLVM build root directory for stage2.
+-LLVM_GCC_obj_3=llvm-gcc_3.obj # The LLVM-GCC build root directory for stage2.
+-
+-INSTALL=install               # Where the result will be installed.
+-
+-# CFLAGS and CXXFLAGS must not be set during the building of cross-tools.
+-unset CFLAGS
+-unset CXXFLAGS
+-
+-BUILD_ROOT=$PWD                           # Where build happens.
+-PRIVATE_INSTALL=${BUILD_ROOT}/${INSTALL}  # Where the result will be installed.
+-
+-export PATH=/opt/local/bin:/opt/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+-export PATH=$PATH:/mingw_build_tools/install/bin
+-export PATH=$PATH:/arm-eabi_build_tools/install/bin
+-export PATH=$PATH:${PRIVATE_INSTALL}/bin
+-
+-#------------------------------------------------------------------------------
+-# Define build steps, parse and validate input parameters
+-#------------------------------------------------------------------------------
+-
+-# This script supports the following steps:
+-do_clean=no                # Clean up the build directory.
+-do_copy_cross_tools=no     # Copy cross-tools and newlib.
+-
+-do_configure_llvm_1=no     # Configure LLVM stage 1.
+-do_make_llvm_1=no          # Make LLVM stage 1.
+-do_install_llvm_1=no       # Install LLVM stage 1.
+-do_test_llvm_1=no          # Test LLVM stage 1.
+-do_configure_llvmgcc_1=no  # Configure LLVM-GCC stage 1.
+-do_make_llvmgcc_1=no       # Make LLVM-GCC stage 1.
+-do_install_llvmgcc_1=no    # Install LLVM-GCC stage 1.
+-
+-do_configure_llvm_2=no     # Configure LLVM stage 2.
+-do_make_llvm_2=no          # Make LLVM stage 2.
+-do_install_llvm_2=no       # Install LLVM stage 2.
+-do_test_llvm_2=no          # Test LLVM stage 2.
+-do_configure_llvmgcc_2=no  # Configure LLVM-GCC stage 2.
+-do_make_llvmgcc_2=no       # Make LLVM-GCC stage 2.
+-do_install_llvmgcc_2=no    # Install LLVM-GCC stage 2.
+-
+-do_configure_llvm_3=no     # Configure LLVM stage 3.
+-do_make_llvm_3=no          # Make LLVM stage 3.
+-do_install_llvm_3=no       # Install LLVM stage 3.
+-do_configure_llvmgcc_3=no  # Configure LLVM-GCC stage 3.
+-do_make_llvmgcc_3=no       # Make LLVM-GCC stage 3.
+-do_install_llvmgcc_3=no    # Install LLVM-GCC stage 3.
+-
+-do_all=no                  # Runs all steps at once when requested.
+-
+-# Set step parameter
+-if (( $# == 0 )) ; then
+-   do_all=yes
+-fi
+-# else
+-if (( ! $# == 0 )) ; then
+-   # First check that the parameter actually defines a step.
+-   case $1 in
+-      clean               |  \
+-	  copy_cross_tools    |  \
+-	  configure_llvm_1    |  \
+-      make_llvm_1         |  \
+-	  install_llvm_1      |  \
+-      test_llvm_1         |  \
+-      configure_llvmgcc_1 |  \
+-      make_llvmgcc_1      |  \
+-      install_llvmgcc_1   |  \
+-      configure_llvm_2    |  \
+-      make_llvm_2         |  \
+-	  install_llvm_2      |  \
+-      test_llvm_2         |  \
+-      configure_llvmgcc_2 |  \
+-      make_llvmgcc_2      |  \
+-      install_llvmgcc_2   |  \
+-      configure_llvm_3    |  \
+-      make_llvm_3         |  \
+-	  install_llvm_3      |  \
+-      configure_llvmgcc_3 |  \
+-      make_llvmgcc_3      |  \
+-      install_llvmgcc_3   |  \
+-      all)
+-         eval do_$1=yes    # Set the flag for the requested step .
+-         shift             # Remove it since is is ours and already precessed.
+-         ;;
+-
+-      *)
+-         # Not our parameter. Pass it as is.
+-   esac
+-fi
+-
+-# Set all steps if do_all requested
+-if [ "$do_all" == "yes" ] ; then
+-   # Set all steps to yes
+-   do_clean=yes
+-   do_copy_cross_tools=yes
+-   do_configure_llvm_1=yes
+-   do_make_llvm_1=yes
+-   do_install_llvm_1=yes
+-   do_test_llvm_1=yes
+-   do_configure_llvmgcc_1=yes
+-   do_make_llvmgcc_1=yes
+-   do_install_llvmgcc_1=yes
+-   do_configure_llvm_2=yes
+-   do_make_llvm_2=yes
+-   do_install_llvm_2=yes
+-   do_test_llvm_2=yes
+-   do_configure_llvmgcc_2=yes
+-   do_make_llvmgcc_2=yes
+-   do_install_llvmgcc_2=yes   
+-   do_configure_llvm_3=yes
+-   do_make_llvm_3=yes
+-   do_install_llvm_3=yes
+-   do_configure_llvmgcc_3=yes
+-   do_make_llvmgcc_3=yes
+-   do_install_llvmgcc_3=yes
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Clean up.
+-#------------------------------------------------------------------------------
+-if [ "$do_clean" == "yes" ] ; then
+-
+-   # Remove everything from where we will be installing the result.
+-   rm -rf ${PRIVATE_INSTALL}
+-   mkdir -p ${PRIVATE_INSTALL}
+-   chmod a+rx ${PRIVATE_INSTALL}
+-   
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Copy newlib.
+-#------------------------------------------------------------------------------
+-if [ "$do_copy_cross_tools" == "yes" ] ; then
+-
+-   cp -RL /mingw_build_tools/install/ ${PRIVATE_INSTALL}
+-   cp -RL /arm-eabi_build_tools/install/ ${PRIVATE_INSTALL}
+-
+-   cp -RL /arm-eabi_build_tools/newlib-src/newlib ${BUILD_ROOT}/${LLVM_GCC_src}
+-   cp -RL /arm-eabi_build_tools/newlib-src/libgloss \
+-      ${BUILD_ROOT}/${LLVM_GCC_src}
+-
+-fi
+-
+-#==============================================================================
+-# STAGE 1 builds cross llvm-gcc for mingw32.
+-#==============================================================================
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Configure LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvm_1" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_obj_1}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_obj_1}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_obj_1}
+-   cd ${BUILD_ROOT}/${LLVM_obj_1}
+-   
+-   ../${LLVM_src}/configure --prefix=${PRIVATE_INSTALL}           \
+-      --build=x86_64-apple-darwin10 --host=x86_64-apple-darwin10  \
+-      --target=i686-pc-mingw32                                    \
+-      --enable-optimize                                           \
+-      --without-llvmgcc --without-llvmgxx                         \
+-      $@  # Extra args if any   
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Make LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvm_1" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_1}
+-   # NOTE: Do not build with ENABLE_OPTIMIZED=1 - some test fail after it.   
+-   nice -n 20 make VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Install LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvm_1" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_1}
+-   nice -n 20 make install VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Test LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_test_llvm_1" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_1}
+-   make check-lit VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Configure LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvmgcc_1" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_GCC_obj_1}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_GCC_obj_1}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_GCC_obj_1}
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_1}  
+-   
+-   ../${LLVM_GCC_src}/configure --prefix=${PRIVATE_INSTALL}      \
+-      --build=x86_64-apple-darwin10 --host=x86_64-apple-darwin10 \
+-      --target=i686-pc-mingw32                                   \
+-      --with-local-prefix=/tools                                 \
+-      --program-prefix=i686-pc-mingw32-                          \
+-      --enable-llvm=${BUILD_ROOT}/${LLVM_obj_1}                  \
+-      --enable-languages=c,c++                                   \
+-      --disable-multilib --disable-nls --disable-shared          \
+-      --disable-sjlj-exceptions --disable-__cxa_atexit           \
+-      $@  # Extra args if any
+-  
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Make LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvmgcc_1" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_1}
+-   nice -n 20 make all \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage1. Install LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvmgcc_1" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_1}
+-   nice -n 20 make install \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#==============================================================================
+-# STAGE 2 builds cross llvm-gcc for arm-eabi.
+-#==============================================================================
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Configure LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvm_2" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_obj_2}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_obj_2}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_obj_2}
+-   cd ${BUILD_ROOT}/${LLVM_obj_2}
+-   
+-   ../${LLVM_src}/configure --prefix=${PRIVATE_INSTALL} \
+-      --build=x86_64-apple-darwin10                     \
+-      --host=x86_64-apple-darwin10                      \
+-      --target=arm-eabi                                 \
+-      --enable-optimized                                \
+-      --enable-targets=cbe,arm                          \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Make LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvm_2" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_2}
+-   # NOTE: Do not build with ENABLE_OPTIMIZED=1 - some test fail after it.   
+-   nice -n 20 make VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Install LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvm_2" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_2}
+-   nice -n 20 make install VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Test LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_test_llvm_2" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_2}
+-   make check-lit VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Configure LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvmgcc_2" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_GCC_obj_2}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_GCC_obj_2}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_GCC_obj_2}
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_2}  
+-   
+-   ../${LLVM_GCC_src}/configure --prefix=${PRIVATE_INSTALL} \
+-      --build=x86_64-apple-darwin10                         \
+-      --host=x86_64-apple-darwin10                          \
+-      --target=arm-eabi                                     \
+-      --enable-languages=c,c++                              \
+-      --disable-nls                                         \
+-      --program-prefix=arm-eabi-                            \
+-      --with-newlib                                         \
+-      --with-headers=yes                                    \
+-      --enable-llvm=${BUILD_ROOT}/${LLVM_obj_2}             \
+-      --with-cpu=cortex-a8                                  \
+-      --with-fpu=neon                                       \
+-      --with-float=hard                                     \
+-      --with-abi=aapcs                                      \
+-      $@  # Extra args if any
+-   
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Make LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvmgcc_2" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_2}
+-   nice -n 20 make all \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage2. Install LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvmgcc_2" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_2}
+-   nice -n 20 make install \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#==============================================================================
+-# STAGE 3 builds mingw-hosted llvm-gcc for arm-eabi.
+-#==============================================================================
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Configure LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvm_3" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_obj_3}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_obj_3}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_obj_3}
+-   cd ${BUILD_ROOT}/${LLVM_obj_3}
+-   
+-   ../${LLVM_src}/configure --prefix=${PRIVATE_INSTALL} \
+-      --build=x86_64-apple-darwin10                     \
+-      --host=i686-pc-mingw32 --target=arm-eabi          \
+-      --enable-optimized                                \
+-      --enable-targets=cbe,arm                          \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Make LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvm_3" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_3}
+-   # NOTE: Do not build with ENABLE_OPTIMIZED=1 - some test fail after it.   
+-   nice -n 20 make VERBOSE=1 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Install LLVM.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvm_3" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_obj_3}
+-   nice -n 20 make install VERBOSE=3 \
+-      $@  # Extra args if any, like -j16 for example.
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Configure LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_configure_llvmgcc_3" == "yes" ] ; then
+-
+-   # Remove previously build files if any.
+-   rm -rf ${BUILD_ROOT}/${LLVM_GCC_obj_3}
+-   mkdir -p ${BUILD_ROOT}/${LLVM_GCC_obj_3}
+-   chmod a+rx ${BUILD_ROOT}/${LLVM_GCC_obj_3}
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_3}  
+-   
+-   ../${LLVM_GCC_src}/configure --prefix=${PRIVATE_INSTALL} \
+-      --build=x86_64-apple-darwin10                         \
+-      --host=i686-pc-mingw32 --target=arm-eabi              \
+-      --enable-languages=c,c++                              \
+-      --disable-nls                                         \
+-      --program-prefix=arm-eabi-                            \
+-      --with-newlib                                         \
+-      --with-headers=yes                                    \
+-      --enable-llvm=${BUILD_ROOT}/${LLVM_obj_3}             \
+-      --with-cpu=cortex-a8                                  \
+-      --with-fpu=neon                                       \
+-      --with-float=hard                                     \
+-      --with-abi=aapcs                                      \
+-      $@  # Extra args if any
+-   
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Make LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_make_llvmgcc_3" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_3}
+-   nice -n 20 make all \
+-      $@  # Extra args if any
+-
+-fi
+-
+-#------------------------------------------------------------------------------
+-# Step: Stage3. Install LLVM-GCC.
+-#------------------------------------------------------------------------------
+-if [ "$do_install_llvmgcc_3" == "yes" ] ; then
+-
+-   cd ${BUILD_ROOT}/${LLVM_GCC_obj_3}
+-   nice -n 20 make install \
+-      $@  # Extra args if any
+-
+-fi
+-
+-
+diff -r 8405d3453566 gcc/Makefile.in
+--- a/gcc/Makefile.in	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/Makefile.in	Mon Jun 13 17:55:14 2011 -0700
+@@ -1684,7 +1684,7 @@
+ #
+ # Build libgcc.a.
+ 
+-LIB2ADD = $(LIB2FUNCS_EXTRA)
++LIB2ADD = $(LIB2FUNCS_EXTRA) $(srcdir)/libgcc-memcpy.c
+ LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
+ 
+ # LLVM LOCAL begin libcc_kext
+diff -r 8405d3453566 gcc/builtins.c
+--- a/gcc/builtins.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/builtins.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -4359,6 +4359,30 @@
+   return build_va_arg_indirect_ref (addr);
+ }
+ 
++/* Use the LLVM implementation of va_arg: turn __builtin_va_arg, aka
++   VA_ARG_EXPR, into a call to BUILT_IN_VA_ARG, which will later get
++   lowered into the LLVM va_arg instruction. */
++tree
++llvm_gimplify_va_arg_expr (tree valist, tree type, tree *pre_p, tree *post_p)
++{
++  tree expr;
++
++  /* if the tree code is an ARRAY_TYPE, gimplify_va_arg_expr has already
++     taken the address before calling us. */
++  if (TREE_CODE (va_list_type_node) != ARRAY_TYPE)
++    /* Take the address: despite the syntax, the va_list is really being
++       passed by reference with the intent of modification. */
++    valist = build1 (ADDR_EXPR,
++		     build_pointer_type (TREE_TYPE (valist)),
++		     valist);
++
++  valist = tree_cons (NULL_TREE, valist, NULL_TREE);
++  expr = build_function_call_expr (
++      implicit_built_in_decls[BUILT_IN_VA_ARG], valist);
++  TREE_TYPE(expr) = type;
++  return expr;
++}
++
+ /* Build an indirect-ref expression over the given TREE, which represents a
+    piece of a va_arg() expansion.  */
+ tree
+@@ -4476,7 +4500,13 @@
+ 	   assert this is non-null.  */
+ 	return GS_ALL_DONE;
+ 
+-      *expr_p = targetm.gimplify_va_arg_expr (valist, type, pre_p, post_p);
++      if (flag_use_llvm_va_arg)
++        /* -fuse-llvm-va-arg was specified. Don't expand the VA_ARG
++           operator, but turn it into an LLVM VAArgInst */
++        *expr_p = llvm_gimplify_va_arg_expr (valist, type, pre_p, post_p);
++      else
++        *expr_p = targetm.gimplify_va_arg_expr (valist, type, pre_p, post_p);
++
+       return GS_OK;
+     }
+ }
+diff -r 8405d3453566 gcc/builtins.def
+--- a/gcc/builtins.def	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/builtins.def	Mon Jun 13 17:55:14 2011 -0700
+@@ -702,6 +702,14 @@
+ DEF_GCC_BUILTIN        (BUILT_IN_VA_COPY, "va_copy", BT_FN_VOID_VALIST_REF_VALIST_ARG, ATTR_NULL)
+ DEF_GCC_BUILTIN        (BUILT_IN_VA_END, "va_end", BT_FN_VOID_VALIST_REF, ATTR_NULL)
+ DEF_GCC_BUILTIN        (BUILT_IN_VA_START, "va_start", BT_FN_VOID_VALIST_REF_VAR, ATTR_NULL)
++/* NB, the source generates a call to __builtin_va_arg, which corresponds to 
++ * the VA_ARG_EXPR tree operator; we lower this to a call to the function below
++ * which is then lowered to an LLVM opcode.  i.e. the call exists only 
++ * transiently during gimplification and its name is completely arbitrary.
++ * We hackishly store the va_arg macro's type argument in the tree.type field 
++ * of the function call result.
++ */
++DEF_GCC_BUILTIN        (BUILT_IN_VA_ARG, "va_arg", BT_FN_VOID_VALIST_REF_VAR, ATTR_NULL)
+ DEF_EXT_LIB_BUILTIN    (BUILT_IN__EXIT, "_exit", BT_FN_VOID_INT, ATTR_NORETURN_NOTHROW_LIST)
+ DEF_C99_BUILTIN        (BUILT_IN__EXIT2, "_Exit", BT_FN_VOID_INT, ATTR_NORETURN_NOTHROW_LIST)
+ 
+diff -r 8405d3453566 gcc/cgraphunit.c
+--- a/gcc/cgraphunit.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/cgraphunit.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -1632,6 +1632,8 @@
+       return;
+     }
+ 
++  process_pending_assemble_externals ();
++
+   /* Frontend may output common variables after the unit has been finalized.
+      It is safe to deal with them here as they are always zero initialized.  */
+   cgraph_varpool_analyze_pending_decls ();
+diff -r 8405d3453566 gcc/common.opt
+--- a/gcc/common.opt	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/common.opt	Mon Jun 13 17:55:14 2011 -0700
+@@ -117,6 +117,16 @@
+ Common Var(warn_padded)
+ Warn when padding is required to align structure members
+ 
++; LOCALMOD-BEGIN
++Wportable-llvm
++Common Var(warn_portable_llvm)
++Warn if non-portable asm will be emitted into LLVM bitcode
++
++Werror-portable-llvm
++Common Var(error_portable_llvm)
++Treat non-portable asm that will be emitted into LLVM bitcode as errors
++; LOCALMOD-END
++
+ Wshadow
+ Common Var(warn_shadow)
+ Warn when one local variable shadows another
+@@ -1252,6 +1262,10 @@
+ Enable common options for performing profile feedback directed optimizations
+ ; APPLE LOCAL end new profiling flag
+ 
++fuse-llvm-va-arg
++Common Report Var(flag_use_llvm_va_arg) Init(0)
++Use the LLVM va_arg instruction instead of generating target-dependent code.
++
+ fvar-tracking
+ Common Report Var(flag_var_tracking) VarExists
+ Perform variable tracking
+diff -r 8405d3453566 gcc/config.gcc
+--- a/gcc/config.gcc	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config.gcc	Mon Jun 13 17:55:14 2011 -0700
+@@ -485,10 +485,6 @@
+       tm_defines="${tm_defines} FBSD_MAJOR=8" ;;
+     *-*-freebsd9 | *-*-freebsd[9].*)
+       tm_defines="${tm_defines} FBSD_MAJOR=9" ;;
+-    *-*-freebsd10 | *-*-freebsd10.*)
+-      tm_defines="${tm_defines} FBSD_MAJOR=10" ;;
+-    *-*-freebsd11 | *-*-freebsd11.*)
+-      tm_defines="${tm_defines} FBSD_MAJOR=11" ;;
+     *)
+       echo 'Please update *-*-freebsd* in gcc/config.gcc'
+       exit 1
+@@ -522,7 +518,7 @@
+   ;;
+ *-*-linux* | frv-*-*linux* | *-*-kfreebsd*-gnu | *-*-knetbsd*-gnu)
+   # Must come before *-*-gnu* (because of *-*-linux-gnu* systems).
+-  extra_parts="crtbegin.o crtbeginS.o crtbeginT.o crtend.o crtendS.o"
++  extra_parts="crtbegin.o crtbeginT.o crtend.o"
+   extra_options="${extra_options} linux.opt"
+   gas=yes
+   gnu_ld=yes
+diff -r 8405d3453566 gcc/config/arm/arm-tune.md
+--- a/gcc/config/arm/arm-tune.md	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/arm-tune.md	Mon Jun 13 17:55:14 2011 -0700
+@@ -1,5 +1,5 @@
+ ;; -*- buffer-read-only: t -*-
+ ;; Generated automatically by gentune.sh from arm-cores.def
+ (define_attr "tune"
+-	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2fs,cortexa9,arm1156t2s,cortexa8,cortexr4,cortexm3"
++	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,cortexa8,cortexa9,cortexr4,cortexm3,cortexm4,cortexm0"
+ 	(const (symbol_ref "arm_tune")))
+diff -r 8405d3453566 gcc/config/arm/arm.c
+--- a/gcc/config/arm/arm.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/arm.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -456,8 +456,25 @@
+ #undef TARGET_ASM_TTYPE
+ #define TARGET_ASM_TTYPE arm_output_ttype
+ 
++/* @LOCALMOD-START */
++/* Remove ARM bias in bitcode generated for exception handling 
++ * NOTE: LLVM abstracts away unwind table generation so we can ignore this here
++ * 
++ * The ARM bias mentioned above is reflected by if statements like:
++ *   if (targetm.arm_eabi_unwinder)
++ *
++ * Concretely, in gcc/cp/except.c we now use:
++ * _Unwind_Resume_or_Rethrow instead of  __cxa_end_cleanup 
++ *
++ * Note, We may needs to do something similar for  TARGET_CXX_USE_AEABI_ATEXIT
++ * which controls the use of __aeabi_atexit via targetm.cxx.use_aeabi_atexit
++ */
++/*
+ #undef TARGET_ARM_EABI_UNWINDER
+ #define TARGET_ARM_EABI_UNWINDER true
++*/
++/* @LOCALMOD-END  */
++
+ #endif /* TARGET_UNWIND_INFO */
+ 
+ /* APPLE LOCAL begin v7 support. Merge from mainline */
+@@ -23358,6 +23375,16 @@
+   if (IS_IWMMXT_REGNUM (regno))
+     return 112 + regno - FIRST_IWMMXT_REGNUM;
+ 
++  /* @LOCALMOD-START */
++  /* this is a horrible hack and we only ever get here when processing the
++   * built-in __builtin_init_dwarf_reg_size_table within libgcc_eh 
++   * which is processed by c.f. TreeToLLVM::EmitBuiltinInitDwarfRegSizes()
++   * 
++   * using PSEUDO_REGISTER - 1 is safe as we only care about the first 16 regs
++   * anyway 
++   */
++  return FIRST_PSEUDO_REGISTER - 1;
++  /* @LOCALMOD-END */
+   gcc_unreachable ();
+ }
+ 
+diff -r 8405d3453566 gcc/config/arm/arm.h
+--- a/gcc/config/arm/arm.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/arm.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -402,6 +402,9 @@
+ 
+ extern enum float_abi_type arm_float_abi;
+ 
++/* @LOCALMOD-BEGIN */
++#define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_HARD
++/* @LOCALMOD-END */
+ #ifndef TARGET_DEFAULT_FLOAT_ABI
+ #define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_SOFT
+ #endif
+@@ -694,6 +697,18 @@
+ #endif
+ 
+ 
++
++/* @LOCALMOD-START */
++/*
++ * This macro specifies the maximum number of hard registers that
++ * can be saved in a call frame
++ * NOTE: this needs some more investigation but enables us to build libgcc_eh
++ * for ARM
++ *
++ */
++#define DWARF_FRAME_REGISTERS 16
++/* @LOCALMOD-END */
++
+ /* Standard register usage.  */
+ 
+ /* Register allocation in ARM Procedure Call Standard (as used on RISCiX):
+diff -r 8405d3453566 gcc/config/arm/bpabi.S
+--- a/gcc/config/arm/bpabi.S	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/bpabi.S	Mon Jun 13 17:55:14 2011 -0700
+@@ -81,7 +81,7 @@
+ #ifdef L_aeabi_ldivmod
+ 
+ ARM_FUNC_START aeabi_ldivmod
+-	sub sp, sp, #8
++	sfi_sub sp, sp, #8
+ /* APPLE LOCAL begin v7 support. Merge from mainline */
+ #if defined(__thumb2__)
+ 	mov ip, sp
+@@ -89,9 +89,10 @@
+ #else
+ 	do_push {sp, lr}
+ #endif
++	sfi_call_preamble
+ 	bl SYM(__gnu_ldivmod_helper) __PLT__
+ 	ldr lr, [sp, #4]
+-	add sp, sp, #8
++	sfi_add sp, sp, #8
+ 	do_pop {r2, r3}
+ /* APPLE LOCAL end v7 support. Merge from mainline */
+ 	RET
+@@ -101,7 +102,7 @@
+ #ifdef L_aeabi_uldivmod
+ 
+ ARM_FUNC_START aeabi_uldivmod
+-	sub sp, sp, #8
++	sfi_sub sp, sp, #8
+ /* APPLE LOCAL begin v7 support. Merge from mainline */
+ #if defined(__thumb2__)
+ 	mov ip, sp
+@@ -109,9 +110,10 @@
+ #else
+ 	do_push {sp, lr}
+ #endif
++	sfi_call_preamble
+ 	bl SYM(__gnu_uldivmod_helper) __PLT__
+ 	ldr lr, [sp, #4]
+-	add sp, sp, #8
++	sfi_add sp, sp, #8
+ 	do_pop {r2, r3}
+ /* APPLE LOCAL end v7 support. Merge from mainline */
+ 	RET
+diff -r 8405d3453566 gcc/config/arm/bpabi.h
+--- a/gcc/config/arm/bpabi.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/bpabi.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -66,12 +66,20 @@
+ #define RENAME_LIBRARY_SET ".set"
+ #endif
+ 
++/* @LOCALMOD-START
++ * use a non-asm mechanism for creating function aliases 
++ */
++#if 1 
++#define RENAME_LIBRARY(GCC_NAME, AEABI_NAME) \
++  void __aeabi_  ## AEABI_NAME () __attribute__ ((alias ( "__" #GCC_NAME)));	
++#else
++/* @LOCALMOD-END */
+ /* Make __aeabi_AEABI_NAME an alias for __GCC_NAME.  */
+ #define RENAME_LIBRARY(GCC_NAME, AEABI_NAME)		\
+   __asm__ (".globl\t__aeabi_" #AEABI_NAME "\n"		\
+ 	   RENAME_LIBRARY_SET "\t__aeabi_" #AEABI_NAME 	\
+ 	     ", __" #GCC_NAME "\n");
+-
++#endif /* @LOCAMOD */
+ /* Give some libgcc functions an additional __aeabi name.  */
+ #ifdef L_muldi3
+ #define DECLARE_LIBRARY_RENAMES RENAME_LIBRARY (muldi3, lmul)
+diff -r 8405d3453566 gcc/config/arm/lib1funcs.asm
+--- a/gcc/config/arm/lib1funcs.asm	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/lib1funcs.asm	Mon Jun 13 17:55:14 2011 -0700
+@@ -32,6 +32,9 @@
+ 
+ /* We need to know what prefix to add to function names.  */
+ 
++/* @LOCALMOD: This must be the first thing in the file */
++#include "naclmacros.asm"
++
+ #ifndef __USER_LABEL_PREFIX__
+ #error  __USER_LABEL_PREFIX__ not defined
+ #endif
+@@ -97,8 +100,8 @@
+ 
+ #if (__ARM_ARCH__ > 4) || defined(__ARM_ARCH_4T__)
+ 
+-# define RET		bx	lr
+-# define RETc(x)	bx##x	lr
++# define RET		sfi_bx	lr
++# define RETc(x)	sfi_bx##x	lr
+ 
+ /* Special precautions for interworking on armv4t.  */
+ # if (__ARM_ARCH__ == 4)
+@@ -116,7 +119,7 @@
+ #endif /* __ARM_ARCH == 4 */
+ 
+ #else
+-
++/* LOCALMOD we do not support ARCH 4 in NaCl, no changes here. */
+ # define RET		mov	pc, lr
+ # define RETc(x)	mov##x	pc, lr
+ 
+@@ -210,22 +213,28 @@
+ 	bx	lr
+ #else
+ #define RETLDM \
+-	ldr     pc, [sp], #8
++	ldr     lr, [sp], #8
++  sfi_bx  lr
+ /* APPLE LOCAL begin v7 support. Merge from mainline */
+ #if defined (__thumb2__)
+ #define RETLDM1(...) \
+-	pop   {__VA_ARGS__, pc}
++	pop   {__VA_ARGS__, lr}
++  sfi_bx lr
+ #define RETLDM2(cond,...) \
+-	pop##cond   {__VA_ARGS__, pc}
++	pop##cond   {__VA_ARGS__, lr}
++  sfi_bx lr
+ #else
+ #define RETLDM1(...) \
+-	ldmia   sp!, {__VA_ARGS__, pc}
++	ldmia   sp!, {__VA_ARGS__, lr}
++  sfi_bx lr
+ #define RETLDM2(cond,...) \
+-	ldm##cond##ia   sp!, {__VA_ARGS__, pc}
++	ldm##cond##ia   sp!, {__VA_ARGS__, lr}
++  sfi_bx lr
+ #endif
+ /* APPLE LOCAL end v7 support. Merge from mainline */
+ #define RETLDM_unwind(addr) \
+-	ldr	pc, [sp], #8
++	ldr	lr, [sp], #8
++  sfi_bx lr
+ #endif
+ 
+ /* APPLE LOCAL begin v7 support. Merge from mainline */
+@@ -292,6 +301,7 @@
+ #if !defined(__MACH__)
+ 98:	cfi_push 98b - __\name, 0xe, -0x8, 0x8
+ #endif
++  sfi_call_preamble
+ 	bl	SYM (__div0) __PLT__
+ 	mov	r0, #0			@ About as wrong as it could be.
+ 	RETLDM_unwind (8b)
+@@ -303,13 +313,15 @@
+ #if !defined(__MACH__)
+ 7:	cfi_push 7b - __\name, 0xe, -0x4, 0x8
+ #endif
++  sfi_call_preamble
+ 	bl	SYM (__div0)
+ 	mov	r0, #0			@ About as wrong as it could be.
+ #if defined (__INTERWORKING__)
+ 	pop	{ r1, r2 }
+ 	bx	r2
+ #else
+-	pop	{ r1, pc }
++	pop	{ r1, lr }
++  sfi_bx lr
+ #endif
+ .endm
+ 
+@@ -372,7 +384,7 @@
+ #define THUMB_FUNC
+ #define THUMB_CODE
+ /* APPLE LOCAL ARM function alignment */
+-#define FUNC_ALIGN .align 2
++#define FUNC_ALIGN .align 4
+ /* APPLE LOCAL v7 support. Merge from mainline */
+ #define THUMB_SYNTAX
+ #endif
+@@ -391,7 +403,7 @@
+ 	.text
+ 	.globl SYM (__\name)
+ 	TYPE (__\name)
+-	.align 0
++	.align 4
+ 	THUMB_CODE
+ 	THUMB_FUNC
+ SYM (__\name):
+@@ -418,6 +430,7 @@
+ #if defined(__MACH__)
+   bl ___$0
+ #else
++  sfi_call_preamble
+   bl  ___\name
+ #endif
+ .endm
+@@ -471,7 +484,7 @@
+ 	.text
+ 	.globl SYM (__\name)
+ 	TYPE (__\name)
+-	.align 0
++	.align 4
+ 	.arm
+ SYM (__\name):
+ #endif
+@@ -481,6 +494,7 @@
+ #if defined(__MACH__)
+ 	bl	SYM (__$0)
+ #else
++  sfi_call_preamble
+ 	bl	__\name
+ #endif
+ .endm
+@@ -534,16 +548,18 @@
+ 	.set	shift, shift - 1				; \
+ 	cmp	dividend, divisor, lsl #shift			; \
+ 	adc	result, result, result				; \
+-	subcs	dividend, dividend, divisor, lsl #shift
++	subcs	dividend, dividend, divisor, lsl #shift  ; \
++  nop
+ #define ARM_DIV_BODY(dividend, divisor, result, curbit)	  	  \
+ 	clz	curbit, dividend				; \
+ 	clz	result, divisor					; \
+ 	sub	curbit, result, curbit				; \
+ 	rsbs	curbit, curbit, #31				; \
+-	addne	curbit, curbit, curbit, lsl #1			; \
+ 	mov	result, #0					; \
+-	addne	pc, pc, curbit, lsl #2				; \
+-	nop							; \
++  sfi_new_bundle                ; \
++  add curbit, pc, curbit, lsl #4  ; \
++  add curbit, curbit, #8  ; \
++  sfi_bxne curbit         ; \
+ 	.set	shift, 32					; \
+ 	ARMV5_DIV_LOOP (dividend, divisor, result)		; \
+ 	ARMV5_DIV_LOOP (dividend, divisor, result)		; \
+@@ -671,14 +687,18 @@
+ #define ARMV5_MOD_LOOP(dividend, divisor)			  \
+ 	.set	shift, shift - 1				; \
+ 	cmp	dividend, divisor, lsl #shift			; \
+-	subcs	dividend, dividend, divisor, lsl #shift
++	subcs	dividend, dividend, divisor, lsl #shift ; \
++  nop ; \
++  nop
+ #define ARM_MOD_BODY(dividend, divisor, order, spare)	 	  \
+ 	clz	order, divisor					; \
+ 	clz	spare, dividend					; \
+ 	sub	order, order, spare				; \
+ 	rsbs	order, order, #31				; \
+-	addne	pc, pc, order, lsl #3				; \
+-	nop							; \
++  sfi_new_bundle                ; \
++  add spare, pc, order, lsl #4  ; \
++  add spare, spare, #8          ; \
++  sfi_bxne spare                ; \
+ 	.set	shift, 32					; \
+ 	ARMV5_MOD_LOOP (dividend, divisor)			; \
+ 	ARMV5_MOD_LOOP (dividend, divisor)			; \
+@@ -1014,6 +1034,7 @@
+ 	bx	r3
+ #else
+ 	stmfd	sp!, { r0, r1, lr }
++  sfi_call_preamble
+ 	bl	SYM(__udivsi3)
+ 	ldmfd	sp!, { r1, r2, lr }
+ 	mul	r3, r2, r0
+@@ -1165,6 +1186,7 @@
+ 	bx	r3
+ #else
+ 	stmfd	sp!, { r0, r1, lr }
++  sfi_call_preamble
+ 	bl	SYM(__divsi3)
+ 	ldmfd	sp!, { r1, r2, lr }
+ 	mul	r3, r2, r0
+@@ -1266,8 +1288,12 @@
+ 
+ 	/* LLVM LOCAL mainline */
+ 	do_push	{r1, lr}
+-	mov	r0, #SIGFPE
+-	bl	SYM(raise) __PLT__
++#ifdef __native_client__
++	NACL_HALT
++#else
++	mov     r0, #SIGFPE
++	bl      SYM(raise) __PLT__
++#endif
+ 	/* APPLE LOCAL ARM MACH assembler */
+ 	RETLDM1 (r1)
+ 
+@@ -1510,6 +1536,7 @@
+ 		
+ /* Do not build the interworking functions when the target architecture does 
+    not support Thumb instructions.  (This can be a multilib option).  */
++#if defined(__thumb__)
+ #if defined __ARM_ARCH_4T__ || defined __ARM_ARCH_5T__\
+       || defined __ARM_ARCH_5TE__ || defined __ARM_ARCH_5TEJ__ \
+       || __ARM_ARCH__ >= 6
+@@ -1688,6 +1715,7 @@
+ /* APPLE LOCAL v7 support. Merge from mainline */
+ #endif /* !__thumb2__ */
+ #endif /* Arch supports thumb.  */
++#endif /* Thumb is enabled */
+ 
+ #ifndef __symbian__
+ #include "ieee754-df.S"
+diff -r 8405d3453566 gcc/config/arm/libunwind.S
+--- a/gcc/config/arm/libunwind.S	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/libunwind.S	Mon Jun 13 17:55:14 2011 -0700
+@@ -26,6 +26,8 @@
+    the Free Software Foundation, 51 Franklin Street, Fifth Floor,
+    Boston, MA 02110-1301, USA.  */
+ 
++#error "@LOCALMOD we do not use arm specific exception handling"
++
+ #ifndef __symbian__
+ 
+ #include "lib1funcs.asm"
+diff -r 8405d3453566 gcc/config/arm/linux-eabi.h
+--- a/gcc/config/arm/linux-eabi.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/linux-eabi.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -33,8 +33,10 @@
+ 
+ /* We default to a soft-float ABI so that binaries can run on all
+    target hardware.  */
+-#undef TARGET_DEFAULT_FLOAT_ABI
+-#define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_SOFT
++// @LOCALMOD
++// #undef TARGET_DEFAULT_FLOAT_ABI
++// #define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_SOFT
++#define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_HARD
+ 
+ /* We default to the "aapcs-linux" ABI so that enums are int-sized by
+    default.  */
+diff -r 8405d3453566 gcc/config/arm/llvm-arm-target.h
+--- a/gcc/config/arm/llvm-arm-target.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/llvm-arm-target.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -102,6 +102,27 @@
+ #define LLVM_SHOULD_RETURN_VECTOR_AS_SHADOW(X, isBuiltin) \
+   (TREE_INT_CST_LOW(TYPE_SIZE(X)) > 128)
+ 
++
++/* @LOCALMOD-START */
++/* do not do anything special for arm use defaults from: gcc/llvm-abi.h */
++#undef LLVM_SHOULD_PASS_AGGREGATE_IN_MIXED_REGS
++#undef LLVM_TRY_PASS_AGGREGATE_CUSTOM
++#undef LLVM_AGGREGATE_PARTIALLY_PASSED_IN_REGS
++#undef LLVM_AGGR_TYPE_FOR_STRUCT_RETURN
++#undef LLVM_EXTRACT_MULTIPLE_RETURN_VALUE
++#undef LLVM_SHOULD_NOT_USE_SHADOW_RETURN
++#undef LLVM_SHOULD_RETURN_VECTOR_AS_SHADOW
++/* overwrite these defaults to not pass aggregates in regs */
++#define LLVM_SHOULD_PASS_AGGREGATE_AS_FCA(X, TY) true
++#define LLVM_SHOULD_PASS_AGGREGATE_IN_INTEGER_REGS(X, Y, Z) false
++/* force default calling convention */
++#undef TARGET_ADJUST_LLVM_CC
++#define TARGET_ADJUST_LLVM_CC(CC, type)           \
++  {                                               \
++        CC = CallingConv::C;                      \
++  }
++
++/* @LOCALMOD-END */
+ #endif /* LLVM_ABI_H */
+ #endif /* ENABLE_LLVM */
+ /* LLVM LOCAL end (ENTIRE FILE!)  */
+diff -r 8405d3453566 gcc/config/arm/naclmacros.asm
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/gcc/config/arm/naclmacros.asm	Mon Jun 13 17:55:14 2011 -0700
+@@ -0,0 +1,392 @@
++@LOCALMOD_START - NativeClient SFI macros
++  .macro sfi_long_based_on_pos p0 p1 p2 p3 val
++	.set pos, (. - XmagicX) % 16
++	.fill  (((\p3<<12)|(\p2<<8)|(\p1<<4)|\p0)>>pos) & 15, 4, \val
++	.endm
++
++
++  .macro sfi_new_bundle
++  .align 4
++  .endm
++
++	.macro sfi_illegal_if_at_bundle_begining
++	sfi_long_based_on_pos 1 0 0 0 0xe1277777
++	.endm
++
++
++	.macro sfi_nop_if_at_bundle_end
++	sfi_long_based_on_pos 0 0 0 1 0xe1a00000
++	.endm
++
++
++	.macro sfi_nops_to_force_slot3
++	sfi_long_based_on_pos 3 2 1 0 0xe1a00000
++	.endm
++
++
++	.macro sfi_nops_to_force_slot2
++	sfi_long_based_on_pos 2 1 0 3 0xe1a00000
++	.endm
++
++
++	.macro sfi_nops_to_force_slot1
++	sfi_long_based_on_pos 1 0 3 2 0xe1a00000
++	.endm
++
++
++ @ ========================================
++	.macro sfi_data_mask reg cond
++	bic\cond \reg, \reg, #0xc0000000
++	.endm
++
++
++	.macro sfi_code_mask reg cond=
++	bic\cond \reg, \reg, #0xc000000f
++	.endm
++
++
++ @ ========================================
++	.macro sfi_call_preamble
++	sfi_nops_to_force_slot3
++	.endm
++
++
++	.macro sfi_return_alignment_and_code_mask reg cond=
++	sfi_nop_if_at_bundle_end
++	sfi_code_mask \reg \cond
++	.endm
++
++
++ @ ========================================
++	.macro sfi_store_preamble reg cond
++	.if \reg != sp
++	sfi_nop_if_at_bundle_end
++	sfi_data_mask \reg, \cond
++	.endif
++	.endm
++
++
++ @ ========================================
++	.macro sfi_add rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	add \rega, \regb, \imm, \rot
++	sfi_data_mask \rega
++	.endm
++
++
++	.macro sfi_addeq rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addeq \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, eq
++	.endm
++
++
++	.macro sfi_addne rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addne \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ne
++	.endm
++
++
++	.macro sfi_addlt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addlt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lt
++	.endm
++
++
++	.macro sfi_addle rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addle \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, le
++	.endm
++
++
++	.macro sfi_addls rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addls \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ls
++	.endm
++
++
++	.macro sfi_addge rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addge \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ge
++	.endm
++
++
++	.macro sfi_addgt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addgt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, gt
++	.endm
++
++
++	.macro sfi_addhs rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addhs \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hs
++	.endm
++
++
++	.macro sfi_addhi rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addhi \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hi
++	.endm
++
++
++	.macro sfi_addlo rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	addlo \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lo
++	.endm
++
++
++ @ ========================================
++	.macro sfi_sub rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	sub \rega, \regb, \imm, \rot
++	sfi_data_mask \rega
++	.endm
++
++
++	.macro sfi_subeq rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subeq \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, eq
++	.endm
++
++
++	.macro sfi_subne rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subne \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ne
++	.endm
++
++
++	.macro sfi_sublt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	sublt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lt
++	.endm
++
++
++	.macro sfi_suble rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	suble \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, le
++	.endm
++
++
++	.macro sfi_subls rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subls \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ls
++	.endm
++
++
++	.macro sfi_subge rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subge \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ge
++	.endm
++
++
++	.macro sfi_subgt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subgt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, gt
++	.endm
++
++
++	.macro sfi_subhs rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subhs \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hs
++	.endm
++
++
++	.macro sfi_subhi rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	subhi \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hi
++	.endm
++
++
++	.macro sfi_sublo rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	sublo \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lo
++	.endm
++
++
++ @ ========================================
++	.macro sfi_mov rega regb
++	sfi_nop_if_at_bundle_end
++	mov \rega, \regb
++	sfi_data_mask \rega
++	.endm
++
++
++	.macro mov_subeq rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	moveq \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, eq
++	.endm
++
++
++	.macro mov_subne rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movne \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ne
++	.endm
++
++
++	.macro mov_sublt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movlt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lt
++	.endm
++
++
++	.macro mov_suble rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movle \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, le
++	.endm
++
++
++	.macro mov_subls rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movls \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ls
++	.endm
++
++
++	.macro mov_subge rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movge \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, ge
++	.endm
++
++
++	.macro mov_subgt rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movgt \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, gt
++	.endm
++
++
++	.macro mov_subhs rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movhs \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hs
++	.endm
++
++
++	.macro mov_subhi rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movhi \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, hi
++	.endm
++
++
++	.macro mov_sublo rega regb imm rot=0
++	sfi_nop_if_at_bundle_end
++	movlo \rega, \regb, \imm, \rot
++	sfi_data_mask \rega, lo
++	.endm
++
++
++ @ ========================================
++	.macro sfi_bx link
++	sfi_return_alignment_and_code_mask \link
++	bx \link
++	.endm
++
++
++	.macro sfi_bxeq link
++	sfi_return_alignment_and_code_mask \link eq
++	bxeq \link
++	.endm
++
++
++	.macro sfi_bxne link
++	sfi_return_alignment_and_code_mask \link ne
++	bxne \link
++	.endm
++
++
++	.macro sfi_bxlt link
++	sfi_return_alignment_and_code_mask \link lt
++	bxlt \link
++	.endm
++
++
++	.macro sfi_bxle link
++	sfi_return_alignment_and_code_mask \link le
++	bxle \link
++	.endm
++
++
++	.macro sfi_bxls link
++	sfi_return_alignment_and_code_mask \link ls
++	bxls \link
++	.endm
++
++
++	.macro sfi_bxge link
++	sfi_return_alignment_and_code_mask \link ge
++	bxge \link
++	.endm
++
++
++	.macro sfi_bxgt link
++	sfi_return_alignment_and_code_mask \link gt
++	bxgt \link
++	.endm
++
++
++	.macro sfi_bxhs link
++	sfi_return_alignment_and_code_mask \link hs
++	bxhs \link
++	.endm
++
++
++	.macro sfi_bxhi link
++	sfi_return_alignment_and_code_mask \link hi
++	bxhi \link
++	.endm
++
++
++	.macro sfi_bxlo link
++	sfi_return_alignment_and_code_mask \link lo
++	bxlo \link
++	.endm
++
++	.macro sfi_bxcc link
++	sfi_return_alignment_and_code_mask \link lo
++	bxcc \link
++	.endm
++
++
++ @ ========================================
++	.macro sfi_indirect_jump_preamble link
++	sfi_nop_if_at_bundle_end
++	sfi_code_mask \link
++	.endm
++
++
++	.macro sfi_indirect_call_preamble link
++	sfi_nops_to_force_slot2
++	sfi_code_mask \link
++  .endm
++@LOCALMOD_END
++
++.align 4
++XmagicX:
++
++#define NACL_HALT         bkpt 0x6666
++
+diff -r 8405d3453566 gcc/config/arm/pr-support.c
+--- a/gcc/config/arm/pr-support.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/pr-support.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -27,10 +27,7 @@
+    Boston, MA 02110-1301, USA.  */
+ #include "unwind.h"
+ 
+-/* We add a prototype for abort here to avoid creating a dependency on
+-   target headers.  */
+-extern void abort (void);
+-
++#error "@LOCALMOD we do not use arm specific exception handling"
+ typedef struct _ZSt9type_info type_info; /* This names C++ type_info type */
+ 
+ /* Misc constants.  */
+diff -r 8405d3453566 gcc/config/arm/t-bpabi
+--- a/gcc/config/arm/t-bpabi	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/t-bpabi	Mon Jun 13 17:55:14 2011 -0700
+@@ -4,12 +4,15 @@
+ # Add the BPABI C functions.
+ LIB2FUNCS_EXTRA = $(srcdir)/config/arm/bpabi.c \
+ 		  $(srcdir)/config/arm/unaligned-funcs.c
++# @LOCAMOD-START
++# NOTE: disable arm specific exception stuff
++#UNWIND_H = $(srcdir)/config/arm/unwind-arm.h
++#LIB2ADDEH = $(srcdir)/config/arm/unwind-arm.c \
++#  $(srcdir)/config/arm/libunwind.S \
++#  $(srcdir)/config/arm/pr-support.c $(srcdir)/unwind-c.c
++#LIB2ADDEHDEP = $(UNWIND_H) $(srcdir)/config/$(LIB1ASMSRC)
++# @LOCAMOD-END
+ 
+-UNWIND_H = $(srcdir)/config/arm/unwind-arm.h
+-LIB2ADDEH = $(srcdir)/config/arm/unwind-arm.c \
+-  $(srcdir)/config/arm/libunwind.S \
+-  $(srcdir)/config/arm/pr-support.c $(srcdir)/unwind-c.c
+-LIB2ADDEHDEP = $(UNWIND_H) $(srcdir)/config/$(LIB1ASMSRC)
+ 
+ # Add the BPABI names.
+ SHLIB_MAPFILES += $(srcdir)/config/arm/libgcc-bpabi.ver
+diff -r 8405d3453566 gcc/config/arm/t-symbian
+--- a/gcc/config/arm/t-symbian	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/t-symbian	Mon Jun 13 17:55:14 2011 -0700
+@@ -13,9 +13,12 @@
+ 	_fixsfsi _fixunssfsi
+ 
+ # Include the gcc personality routine
+-UNWIND_H = $(srcdir)/config/arm/unwind-arm.h
+-LIB2ADDEH = $(srcdir)/unwind-c.c $(srcdir)/config/arm/pr-support.c
+-LIB2ADDEHDEP = $(UNWIND_H)
++# @LOCAMOD-START
++# NOTE: disable arm specific exception stuff
++#UNWIND_H = $(srcdir)/config/arm/unwind-arm.h
++#LIB2ADDEH = $(srcdir)/unwind-c.c $(srcdir)/config/arm/pr-support.c
++#LIB2ADDEHDEP = $(UNWIND_H)
++# @LOCAMOD-END
+ 
+ # Create a multilib for processors with VFP floating-point, and a
+ # multilib for those without -- using the soft-float ABI in both
+diff -r 8405d3453566 gcc/config/arm/unwind-arm.c
+--- a/gcc/config/arm/unwind-arm.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/arm/unwind-arm.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -27,9 +27,7 @@
+    Boston, MA 02110-1301, USA.  */
+ #include "unwind.h"
+ 
+-/* We add a prototype for abort here to avoid creating a dependency on
+-   target headers.  */
+-extern void abort (void);
++#error "@LOCALMOD we do not use arm specific exception handling"
+ 
+ /* Definitions for C++ runtime support routines.  We make these weak
+    declarations to avoid pulling in libsupc++ unnecessarily.  */
+diff -r 8405d3453566 gcc/config/elfos.h
+--- a/gcc/config/elfos.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/elfos.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -496,13 +496,3 @@
+         fprintf ((FILE), "\"\n");					\
+     }									\
+   while (0)
+-
+-/* A C statement (sans semicolon) to output to the stdio stream STREAM
+-   any text necessary for declaring the name of an external symbol
+-   named NAME whch is referenced in this compilation but not defined.
+-   It is needed to properly support non-default visibility.  */
+-
+-#ifndef ASM_OUTPUT_EXTERNAL
+-#define ASM_OUTPUT_EXTERNAL(FILE, DECL, NAME) \
+-  default_elf_asm_output_external (FILE, DECL, NAME)
+-#endif
+diff -r 8405d3453566 gcc/config/i386/i386.h
+--- a/gcc/config/i386/i386.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/i386/i386.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -621,7 +621,8 @@
+ 
+ /* target machine storage layout */
+ 
+-#define LONG_DOUBLE_TYPE_SIZE 80
++// @LOCALMOD
++#define LONG_DOUBLE_TYPE_SIZE 64
+ 
+ /* Set the value of FLT_EVAL_METHOD in float.h.  When using only the
+    FPU, assume that the fpcw is set to extended precision; when using
+diff -r 8405d3453566 gcc/config/i386/llvm-i386.cpp
+--- a/gcc/config/i386/llvm-i386.cpp	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/i386/llvm-i386.cpp	Mon Jun 13 17:55:14 2011 -0700
+@@ -1746,7 +1746,8 @@
+     case X86_64_X87_CLASS:
+     case X86_64_X87UP_CLASS:
+     case X86_64_COMPLEX_X87_CLASS:
+-      Elts.push_back(Type::getX86_FP80Ty(Context));
++      // @LOCALMOD
++      Elts.push_back(Type::getDoubleTy(Context));
+       break;
+     case X86_64_NO_CLASS:
+       // padding bytes.
+@@ -1769,8 +1770,9 @@
+ 
+   // Special handling for _Complex.
+   if (llvm_x86_should_not_return_complex_in_memory(type)) {
+-    ElementTypes.push_back(Type::getX86_FP80Ty(Context));
+-    ElementTypes.push_back(Type::getX86_FP80Ty(Context));
++    // @LOCALMOD
++    ElementTypes.push_back(Type::getDoubleTy(Context));
++    ElementTypes.push_back(Type::getDoubleTy(Context));
+     return StructType::get(Context, ElementTypes, STy->isPacked());
+   } 
+ 
+diff -r 8405d3453566 gcc/config/i386/t-crtfm
+--- a/gcc/config/i386/t-crtfm	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/i386/t-crtfm	Mon Jun 13 17:55:14 2011 -0700
+@@ -1,4 +1,6 @@
+-EXTRA_PARTS += crtfastmath.o
++# @LOCALMOD we have our own startup code so we do not use this
++#           furthermore, crtfastmath.c contains inline asm's
++#EXTRA_PARTS += crtfastmath.o
+ 
+ $(T)crtfastmath.o: $(srcdir)/config/i386/crtfastmath.c $(GCC_PASSES)
+ 	$(GCC_FOR_TARGET) $(LIBGCC2_CFLAGS) -msse -c \
+diff -r 8405d3453566 gcc/config/i386/t-linux64
+--- a/gcc/config/i386/t-linux64	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/i386/t-linux64	Mon Jun 13 17:55:14 2011 -0700
+@@ -22,7 +22,7 @@
+ LIBGCC = stmp-multilib
+ INSTALL_LIBGCC = install-multilib
+ 
+-EXTRA_MULTILIB_PARTS=crtbegin.o crtend.o crtbeginS.o crtendS.o \
++EXTRA_MULTILIB_PARTS=crtbegin.o crtend.o \
+ 		     crtbeginT.o crtfastmath.o
+ 
+ # The pushl in CTOR initialization interferes with frame pointer elimination.
+diff -r 8405d3453566 gcc/config/i386/unix.h
+--- a/gcc/config/i386/unix.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/i386/unix.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -65,6 +65,12 @@
+ #define TARGET_SUBTARGET_DEFAULT \
+ 	(MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS)
+ 
++// @LOCALMOD-BEGIN: Added MASK_ALIGN_DOUBLE for X86-32.
++#undef TARGET_SUBTARGET32_DEFAULT
++#define TARGET_SUBTARGET32_DEFAULT \
++	(MASK_ALIGN_DOUBLE)
++// @LOCALMOD-END
++
+ /* By default, 64-bit mode uses 128-bit long double.  */
+ #undef TARGET_SUBTARGET64_DEFAULT
+ #define TARGET_SUBTARGET64_DEFAULT \
+diff -r 8405d3453566 gcc/config/ia64/hpux.h
+--- a/gcc/config/ia64/hpux.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/ia64/hpux.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -144,6 +144,10 @@
+    definitions, so do not use them in gthr-posix.h.  */
+ #define GTHREAD_USE_WEAK 0
+ 
++/* Put out the needed function declarations at the end.  */
++
++#define TARGET_ASM_FILE_END ia64_hpux_file_end
++
+ #undef CTORS_SECTION_ASM_OP
+ #define CTORS_SECTION_ASM_OP  "\t.section\t.init_array,\t\"aw\",\"init_array\""
+ 
+diff -r 8405d3453566 gcc/config/ia64/ia64.c
+--- a/gcc/config/ia64/ia64.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/ia64/ia64.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -250,6 +250,10 @@
+ static void ia64_output_dwarf_dtprel (FILE *, int, rtx)
+      ATTRIBUTE_UNUSED;
+ static unsigned int ia64_section_type_flags (tree, const char *, int);
++static void ia64_hpux_add_extern_decl (tree decl)
++     ATTRIBUTE_UNUSED;
++static void ia64_hpux_file_end (void)
++     ATTRIBUTE_UNUSED;
+ static void ia64_init_libfuncs (void)
+      ATTRIBUTE_UNUSED;
+ static void ia64_hpux_init_libfuncs (void)
+@@ -5011,6 +5015,49 @@
+ }
+ 
+ 
++/* Emit text to declare externally defined variables and functions, because
++   the Intel assembler does not support undefined externals.  */
++
++void
++ia64_asm_output_external (FILE *file, tree decl, const char *name)
++{
++  int save_referenced;
++
++  /* GNU as does not need anything here, but the HP linker does need
++     something for external functions.  */
++
++  if (TARGET_GNU_AS
++      && (!TARGET_HPUX_LD
++	  || TREE_CODE (decl) != FUNCTION_DECL
++	  || strstr (name, "__builtin_") == name))
++    return;
++
++  /* ??? The Intel assembler creates a reference that needs to be satisfied by
++     the linker when we do this, so we need to be careful not to do this for
++     builtin functions which have no library equivalent.  Unfortunately, we
++     can't tell here whether or not a function will actually be called by
++     expand_expr, so we pull in library functions even if we may not need
++     them later.  */
++  if (! strcmp (name, "__builtin_next_arg")
++      || ! strcmp (name, "alloca")
++      || ! strcmp (name, "__builtin_constant_p")
++      || ! strcmp (name, "__builtin_args_info"))
++    return;
++
++  if (TARGET_HPUX_LD)
++    ia64_hpux_add_extern_decl (decl);
++  else
++    {
++      /* assemble_name will set TREE_SYMBOL_REFERENCED, so we must save and
++         restore it.  */
++      save_referenced = TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (decl));
++      if (TREE_CODE (decl) == FUNCTION_DECL)
++        ASM_OUTPUT_TYPE_DIRECTIVE (file, name, "function");
++      (*targetm.asm_out.globalize_label) (file, name);
++      TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (decl)) = save_referenced;
++    }
++}
++
+ /* Parse the -mfixed-range= option string.  */
+ 
+ static void
+@@ -9176,33 +9223,55 @@
+    return DEFAULT_FUNCTION_ARG_PADDING (mode, type);
+ }
+ 
+-/* Emit text to declare externally defined variables and functions, because
+-   the Intel assembler does not support undefined externals.  */
+-
+-void
+-ia64_asm_output_external (FILE *file, tree decl, const char *name)
+-{
+-  /* We output the name if and only if TREE_SYMBOL_REFERENCED is
+-     set in order to avoid putting out names that are never really
+-     used. */
+-  if (TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (decl)))
+-    {
+-      /* maybe_assemble_visibility will return 1 if the assembler
+-	 visibility directive is outputed.  */
+-      int need_visibility = ((*targetm.binds_local_p) (decl)
+-			     && maybe_assemble_visibility (decl));
+-
+-      /* GNU as does not need anything here, but the HP linker does
+-	 need something for external functions.  */
+-      if ((TARGET_HPUX_LD || !TARGET_GNU_AS)
+-	  && TREE_CODE (decl) == FUNCTION_DECL)
+-	{
+-	  ASM_OUTPUT_TYPE_DIRECTIVE (file, name, "function");
+-	  (*targetm.asm_out.globalize_label) (file, name);
+-	}
+-      else if (need_visibility && !TARGET_GNU_AS)
+-	(*targetm.asm_out.globalize_label) (file, name);
+-    }
++/* Linked list of all external functions that are to be emitted by GCC.
++   We output the name if and only if TREE_SYMBOL_REFERENCED is set in
++   order to avoid putting out names that are never really used.  */
++
++struct extern_func_list GTY(())
++{
++  struct extern_func_list *next;
++  tree decl;
++};
++
++static GTY(()) struct extern_func_list *extern_func_head;
++
++static void
++ia64_hpux_add_extern_decl (tree decl)
++{
++  struct extern_func_list *p = ggc_alloc (sizeof (struct extern_func_list));
++
++  p->decl = decl;
++  p->next = extern_func_head;
++  extern_func_head = p;
++}
++
++/* Print out the list of used global functions.  */
++
++static void
++ia64_hpux_file_end (void)
++{
++  struct extern_func_list *p;
++
++  for (p = extern_func_head; p; p = p->next)
++    {
++      tree decl = p->decl;
++      tree id = DECL_ASSEMBLER_NAME (decl);
++
++      gcc_assert (id);
++
++      if (!TREE_ASM_WRITTEN (decl) && TREE_SYMBOL_REFERENCED (id))
++        {
++	  const char *name = XSTR (XEXP (DECL_RTL (decl), 0), 0);
++
++	  TREE_ASM_WRITTEN (decl) = 1;
++	  (*targetm.asm_out.globalize_label) (asm_out_file, name);
++	  fputs (TYPE_ASM_OP, asm_out_file);
++	  assemble_name (asm_out_file, name);
++	  fprintf (asm_out_file, "," TYPE_OPERAND_FMT "\n", "function");
++        }
++    }
++
++  extern_func_head = 0;
+ }
+ 
+ /* Set SImode div/mod functions, init_integral_libfuncs only initializes
+diff -r 8405d3453566 gcc/config/mips/predicates.md
+--- a/gcc/config/mips/predicates.md	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/mips/predicates.md	Mon Jun 13 17:55:14 2011 -0700
+@@ -116,9 +116,7 @@
+       /* If -mlong-calls, force all calls to use register addressing.  Also,
+ 	 if this function has the long_call attribute, we must use register
+ 	 addressing.  */
+-      return (!TARGET_LONG_CALLS
+-	      && !(GET_CODE (op) == SYMBOL_REF
+-		   && SYMBOL_REF_LONG_CALL_P (op)));
++      return !TARGET_LONG_CALLS && !SYMBOL_REF_LONG_CALL_P (op);
+ 
+     case SYMBOL_GOT_GLOBAL:
+       /* Without explicit relocs, there is no special syntax for
+diff -r 8405d3453566 gcc/config/sparc/sparc.h
+--- a/gcc/config/sparc/sparc.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/sparc/sparc.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -2488,8 +2488,5 @@
+  */
+ #define LLVM_TARGET_NAME Sparc
+ 
+-#define LLVM_SHOULD_PASS_AGGREGATE_USING_BYVAL_ATTR(X, TY) \
+-  true
+-
+ #endif /* ENABLE_LLVM */
+ /* LLVM LOCAL end */
+diff -r 8405d3453566 gcc/config/t-linux
+--- a/gcc/config/t-linux	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/config/t-linux	Mon Jun 13 17:55:14 2011 -0700
+@@ -1,13 +1,25 @@
+ # Compile crtbeginS.o and crtendS.o with pic.
+ CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
+ # Compile libgcc2.a with pic.
+-TARGET_LIBGCC2_CFLAGS = -fPIC
++# TARGET_LIBGCC2_CFLAGS = -fPIC
+ 
+ # Override t-slibgcc-elf-ver to export some libgcc symbols with
+ # the symbol versions that glibc used.
+ SHLIB_MAPFILES += $(srcdir)/config/libgcc-glibc.ver
+ 
+ # Use unwind-dw2-fde-glibc
+-LIB2ADDEH = $(srcdir)/unwind-dw2.c $(srcdir)/unwind-dw2-fde-glibc.c \
+-  $(srcdir)/unwind-sjlj.c $(srcdir)/gthr-gnat.c $(srcdir)/unwind-c.c
+-LIB2ADDEHDEP = unwind.inc unwind-dw2-fde.h unwind-dw2-fde.c
++# @LOCALMOD-START
++# pnacl uses this config since it is a linux flavor
++# but we do not want it to overwrite the default settings
++# for exception handling
++#
++#LIB2ADDEH = $(srcdir)/unwind-sjlj.c $(srcdir)/gthr-gnat.c
++#LIB2ADDEHDEP = unwind.inc unwind-dw2-fde.h unwind-dw2-fde.c
++# another setup to explore is that of nacl-gcc which is using a newer version
++# of gcc as well:
++#LIB2ADDEH = $(srcdir)/unwind-dw2.c $(srcdir)/unwind-dw2-fde-glibc.c \
++   $(srcdir)/unwind-sjlj.c $(srcdir)/gthr-gnat.c $(srcdir)/unwind-c.c
++#LIB2ADDEHDEP = unwind.inc unwind-dw2-fde.h unwind-dw2-fde.c
++# @LOCALMOD-END
++
++
+diff -r 8405d3453566 gcc/crtstuff.c
+--- a/gcc/crtstuff.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/crtstuff.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -51,6 +51,15 @@
+ 
+    This file must be compiled with gcc.  */
+ 
++/* @LOCALMOD-START
++   Disable all crtstuff for pnacl which has its own startup code
++   Disabling this any other way proved tricky and would involve more changes.
++   Ideally this hack would be eliminated in a special (p)nacl-target, though
++   it is not clear whether this is at all possible.
++*/
++#if 0
++/* @LOCALMOD-END */
++
+ /* Target machine header files require this define. */
+ #define IN_LIBGCC2
+ 
+@@ -688,3 +697,4 @@
+ #else /* ! CRT_BEGIN && ! CRT_END */
+ #error "One of CRT_BEGIN or CRT_END must be defined."
+ #endif
++#endif /* @LOCALMOD-END */
+diff -r 8405d3453566 gcc/dwarf2out.c
+--- a/gcc/dwarf2out.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/dwarf2out.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -10600,7 +10600,7 @@
+     return NULL_TREE;
+   else if (!cgraph_global_info_ready
+ 	   && (TREE_CODE (*tp) == VAR_DECL || TREE_CODE (*tp) == FUNCTION_DECL))
+-    return *tp;
++    gcc_unreachable ();
+   else if (DECL_P (*tp) && TREE_CODE (*tp) == VAR_DECL)
+     {
+       struct cgraph_varpool_node *node = cgraph_varpool_node (*tp);
+@@ -10658,43 +10658,6 @@
+   else if (initializer_constant_valid_p (init, type)
+ 	   && ! walk_tree (&init, reference_to_unused, NULL, NULL))
+     {
+-      /* Convert vector CONSTRUCTOR initializers to VECTOR_CST if
+-	 possible.  */
+-      if (TREE_CODE (type) == VECTOR_TYPE)
+-	switch (TREE_CODE (init))
+-	  {
+-	  case VECTOR_CST:
+-	    break;
+-	  case CONSTRUCTOR:
+-	    if (TREE_CONSTANT (init))
+-	      {
+-		VEC(constructor_elt,gc) *elts = CONSTRUCTOR_ELTS (init);
+-		bool constant_p = true;
+-		tree value;
+-		unsigned HOST_WIDE_INT ix;
+-
+-		/* Even when ctor is constant, it might contain non-*_CST
+-		   elements (e.g. { 1.0/0.0 - 1.0/0.0, 0.0 }) and those don't
+-		   belong into VECTOR_CST nodes.  */
+-		FOR_EACH_CONSTRUCTOR_VALUE (elts, ix, value)
+-		  if (!CONSTANT_CLASS_P (value))
+-		    {
+-		      constant_p = false;
+-		      break;
+-		    }
+-
+-		if (constant_p)
+-		  {
+-		    init = build_vector_from_ctor (type, elts);
+-		    break;
+-		  }
+-	      }
+-	    /* FALLTHRU */
+-
+-	  default:
+-	    return NULL;
+-	  }
+-
+       rtl = expand_expr (init, NULL_RTX, VOIDmode, EXPAND_INITIALIZER);
+ 
+       /* If expand_expr returns a MEM, it wasn't immediate.  */
+@@ -14522,8 +14485,7 @@
+ 	 was generated within the original definition of an inline function) we
+ 	 have to generate a special (abbreviated) DW_TAG_structure_type,
+ 	 DW_TAG_union_type, or DW_TAG_enumeration_type DIE here.  */
+-      if (TYPE_DECL_IS_STUB (decl) && decl_ultimate_origin (decl) != NULL_TREE
+-	  && is_tagged_type (TREE_TYPE (decl)))
++      if (TYPE_DECL_IS_STUB (decl) && decl_ultimate_origin (decl) != NULL_TREE)
+ 	{
+ 	  gen_tagged_type_instantiation_die (TREE_TYPE (decl), context_die);
+ 	  break;
+diff -r 8405d3453566 gcc/expr.c
+--- a/gcc/expr.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/expr.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -5709,6 +5709,7 @@
+   enum machine_mode mode = VOIDmode;
+   tree offset = size_zero_node;
+   tree bit_offset = bitsize_zero_node;
++  tree tem;
+ 
+   /* First get the mode, signedness, and size.  We do this from just the
+      outermost expression.  */
+@@ -5744,8 +5745,6 @@
+ 	*pbitsize = tree_low_cst (size_tree, 1);
+     }
+ 
+-  *pmode = mode;
+-
+   /* Compute cumulative bit-offset for nested component-refs and array-refs,
+      and find the ultimate containing object.  */
+   while (1)
+@@ -5845,25 +5844,18 @@
+  done:
+ 
+   /* If OFFSET is constant, see if we can return the whole thing as a
+-     constant bit position.  Make sure to handle overflow during
+-     this conversion.  */
+-  if (host_integerp (offset, 0))
+-    {
+-      double_int tem = double_int_mul (tree_to_double_int (offset),
+-				       uhwi_to_double_int (BITS_PER_UNIT));
+-      tem = double_int_add (tem, tree_to_double_int (bit_offset));
+-      if (double_int_fits_in_shwi_p (tem))
+-	{
+-	  *pbitpos = double_int_to_shwi (tem);
+-	  *poffset = NULL_TREE;
+-	  return exp;
+-	}
+-    }
+-
+-  /* Otherwise, split it up.  */
+-  *pbitpos = tree_low_cst (bit_offset, 0);
+-  *poffset = offset;
+-
++     constant bit position.  Otherwise, split it up.  */
++  if (host_integerp (offset, 0)
++      && 0 != (tem = size_binop (MULT_EXPR,
++				 fold_convert (bitsizetype, offset),
++				 bitsize_unit_node))
++      && 0 != (tem = size_binop (PLUS_EXPR, tem, bit_offset))
++      && host_integerp (tem, 0))
++    *pbitpos = tree_low_cst (tem, 0), *poffset = 0;
++  else
++    *pbitpos = tree_low_cst (bit_offset, 0), *poffset = offset;
++
++  *pmode = mode;
+   return exp;
+ }
+ 
+diff -r 8405d3453566 gcc/gimplify.c
+--- a/gcc/gimplify.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/gimplify.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -3583,16 +3583,8 @@
+   gcc_assert (TREE_CODE (*expr_p) == MODIFY_EXPR
+ 	      || TREE_CODE (*expr_p) == INIT_EXPR);
+ 
+-  /* See if any simplifications can be done based on what the RHS is.  */
+-  ret = gimplify_modify_expr_rhs (expr_p, from_p, to_p, pre_p, post_p,
+-				  want_value);
+-  if (ret != GS_UNHANDLED)
+-    return ret;
+-
+-  /* For zero sized types only gimplify the left hand side and right hand
+-     side as statements and throw away the assignment.  Do this after
+-     gimplify_modify_expr_rhs so we handle TARGET_EXPRs of addressable
+-     types properly.  */
++  /* For zero sized types only gimplify the left hand side and right hand side
++     as statements and throw away the assignment.  */
+   if (zero_sized_type (TREE_TYPE (*from_p)))
+     {
+       gimplify_stmt (from_p);
+@@ -3603,6 +3595,12 @@
+       return GS_ALL_DONE;
+     }
+ 
++  /* See if any simplifications can be done based on what the RHS is.  */
++  ret = gimplify_modify_expr_rhs (expr_p, from_p, to_p, pre_p, post_p,
++				  want_value);
++  if (ret != GS_UNHANDLED)
++    return ret;
++
+   /* If the value being copied is of variable width, compute the length
+      of the copy into a WITH_SIZE_EXPR.   Note that we need to do this
+      before gimplifying any of the operands so that we can resolve any
+diff -r 8405d3453566 gcc/libgcc-memcpy.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/gcc/libgcc-memcpy.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -0,0 +1,40 @@
++/* memcpy copy for libgcc.  */
++/* Copyright (C) 2010 Free Software Foundation, Inc.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 2, or (at your option) any later
++version.
++
++In addition to the permissions in the GNU General Public License, the
++Free Software Foundation gives you unlimited permission to link the
++compiled version of this file into combinations with other programs,
++and to distribute those combinations without any restriction coming
++from the use of this file.  (The General Public License restrictions
++do apply in other respects; for example, they cover modification of
++the file, and distribution when not linked into a combine
++executable.)
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING.  If not, write to the Free
++Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
++02110-1301, USA.  */
++
++#include <stddef.h>
++
++void *
++memcpy(void *dest, const void *src, size_t n)
++{
++  char *destp = dest;
++  const char *srcp = src;
++  while (n--)
++    *destp++ = *srcp++;
++  return dest;
++}
+diff -r 8405d3453566 gcc/libgcc2.c
+--- a/gcc/libgcc2.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/libgcc2.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -42,6 +42,20 @@
+ #endif
+ /* APPLE LOCAL end libcc_kext */
+ 
++/* On NaCl we want to avoid libgcc -> libc dependencies, and signals are
++   not implemented. */
++
++#ifdef __native_client__
++/* This would be slightly cleaner:
++ *  #define abort() asm("llvm.trap")
++ * but we have trouble with the inliner and bitcode at this point
++ * and llvm transforms the zero dereference into a trap internally anyway.
++ * Note, that int, char, etc. are not available in this file
++ */
++
++#define abort() * (SItype*) 0 = 0
++#endif
++
+ #ifdef HAVE_GAS_HIDDEN
+ #define ATTRIBUTE_HIDDEN  __attribute__ ((__visibility__ ("hidden")))
+ #else
+@@ -2048,6 +2062,14 @@
+ #endif
+ 
+ 
++/* @LOCALMOD-START
++   Since pnacl does not support self modifying code we don't want these
++   functions anyway - but if a need arises we should implement them in
++   src/untrusted/stubs/ analogous to setjmp/longjmp
++*/
++#if 0 
++/* @LOCALMOD-END */
++
+ #ifdef L_clear_cache
+ /* Clear part of an instruction cache.  */
+ 
+@@ -2073,6 +2095,9 @@
+ {}
+ #endif /* ENABLE_EXECUTE_STACK */
+ 
++#endif /* @LOCALMOD */
++
++
+ #endif /* L_enable_execute_stack */
+ 
+ #ifdef L_trampoline
+diff -r 8405d3453566 gcc/llvm-backend.cpp
+--- a/gcc/llvm-backend.cpp	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/llvm-backend.cpp	Mon Jun 13 17:55:14 2011 -0700
+@@ -1894,6 +1894,15 @@
+ /// llvm_emit_file_scope_asm - Emit the specified string as a file-scope inline
+ /// asm block.
+ void llvm_emit_file_scope_asm(const char *string) {
++  // @LOCALMOD-BEGIN
++  // TODO: we may need to check that this is actually ASM and not some
++  // metadata that is masquerading as asm.
++  // There has been discussion about file-scope asm being used as a
++  // mechanism for emitting other strings such as ARM build attributes.
++  // Not sure if there is a portable use case for this.
++  note_nonportable_llvm("About to emit module-level assembly into bitcode!\n");
++  note_nonportable_llvm(string);
++  // @LOCALMOD-END
+   if (TheModule->getModuleInlineAsm().empty())
+     TheModule->setModuleInlineAsm(string);
+   else
+@@ -1926,6 +1935,19 @@
+   WriteTypeSymbolic(RO, (const Type*)LLVM, TheModule);
+ }
+ 
++// @LOCALMOD-BEGIN
++/// note_nonportable_llvm - Note that we are about to emit non-portable
++/// bits into llvm bitcode. This may generate a warning, an error, or nothing,
++/// depending on flags.
++void note_nonportable_llvm(const char *mesg) {
++  if (warn_portable_llvm) {
++    warning(OPT_Wportable_llvm, mesg);
++  } else if (error_portable_llvm) {
++    error("%s", mesg);
++  }
++}
++// @LOCALMOD-END
++
+ /// extractRegisterName - Get a register name given its decl. In 4.2 unlike 4.0
+ /// these names have been run through set_user_assembler_name which means they
+ /// may have a leading \1 at this point; compensate.
+diff -r 8405d3453566 gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/llvm-convert.cpp	Mon Jun 13 17:55:14 2011 -0700
+@@ -4348,6 +4348,10 @@
+     return 0;   // Just don't copy something into DestLoc.
+   }
+ 
++  // @LOCALMOD-BEGIN
++  note_nonportable_llvm("About to emit asm reg-copy into bitcode!\n");
++  // @LOCALMOD-END
++
+   // Turn this into a 'tmp = call Ty asm "", "={reg}"()'.
+   FunctionType *FTy = FunctionType::get(Ty, std::vector<const Type*>(),false);
+ 
+@@ -4374,6 +4378,10 @@
+     return 0;   // Just don't copy something into DestLoc.
+   }
+ 
++  // @LOCALMOD-BEGIN
++  note_nonportable_llvm("About to emit asm reg-copy into bitcode!\n");
++  // @LOCALMOD-END
++
+   std::vector<const Type*> ArgTys;
+   ArgTys.push_back(Ty);
+   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), 
+@@ -4403,6 +4411,10 @@
+   if (ValidateRegisterVariable(decl))
+     return;
+ 
++  // @LOCALMOD-BEGIN
++  note_nonportable_llvm("About to emit asm reg-copy into bitcode!\n");
++  // @LOCALMOD-END
++
+   // Turn this into a 'call void asm sideeffect "", "{reg}"(Ty %RHS)'.
+   std::vector<const Type*> ArgTys;
+   const Type* Ty = ConvertType(TREE_TYPE(decl));
+@@ -4787,6 +4799,18 @@
+ }
+ 
+ Value *TreeToLLVM::EmitASM_EXPR(tree exp) {
++
++  // @LOCALMOD-BEGIN
++  // TODO: refine check if asm is portable (e.g., with some mechanism we
++  // add in the future), and don't warn in that case!
++  // This already skips warnings for asm that maps to portable llvm intrinsics.
++
++  // This output is very verbose and hard to read:
++  // debug_tree(exp);
++  // so instead we print the actual assembly code further down 
++  note_nonportable_llvm("About to emit asm into bitcode!\n");
++  // @LOCALMOD-END
++
+   unsigned NumInputs = list_length(ASM_INPUTS(exp));
+   unsigned NumOutputs = list_length(ASM_OUTPUTS(exp));
+   unsigned NumInOut = 0;
+@@ -5169,6 +5193,9 @@
+     return 0;
+   }
+ 
++  /* @LOCALMOD-START */
++  note_nonportable_llvm(NewAsmStr.c_str());
++  /* @LOCALMOD-END */
+   Value *Asm = InlineAsm::get(FTy, NewAsmStr, ConstraintStr,
+                               HasSideEffects, ASM_ASM_BLOCK(exp));
+   CallInst *CV = Builder.CreateCall(Asm, CallOps.begin(), CallOps.end(),
+@@ -5194,12 +5221,23 @@
+     }
+   }
+ 
++
++/* @LOCALMOD we do not want this for pnacl 
++ * TODO: investigate:
++ * It seemed dangerous to me to invoke anything that smells
++ * like backend from our supposedly architecture agnostic frontend.
++ * In the pnacl case it would only apply arm specific transformations.
++ *
++ * Hopefully, this whole issue is moot as we never have anything to
++ * convert at this point
++ */
++
+   // Give the backend a chance to upgrade the inline asm to LLVM code.  This
+   // handles some common cases that LLVM has intrinsics for, e.g. x86 bswap ->
+   // llvm.bswap.
+   if (const TargetLowering *TLI = TheTarget->getTargetLowering())
+     TLI->ExpandInlineAsm(CV);
+-
++  
+   if (NumChoices>1)
+     FreeConstTupleStrings(ReplacementStrings, NumInputs+NumOutputs);
+   return 0;
+@@ -5479,6 +5517,7 @@
+   // Varargs builtins.
+   case BUILT_IN_VA_START:
+   case BUILT_IN_STDARG_START:   return EmitBuiltinVAStart(exp);
++  case BUILT_IN_VA_ARG:         return EmitBuiltinVAArg(exp, Result);
+   case BUILT_IN_VA_END:         return EmitBuiltinVAEnd(exp);
+   case BUILT_IN_VA_COPY:        return EmitBuiltinVACopy(exp);
+   case BUILT_IN_CONSTANT_P:     return EmitBuiltinConstantP(exp, Result);
+@@ -6606,8 +6645,22 @@
+   if (!validate_arglist(TREE_OPERAND(exp, 1), VOID_TYPE))
+     return false;
+ 
++  /*
++   * @LOCALMOD-START
++   * A really gross hack - this is never used for ARM and causes
++   * an ICE/segfault (likely because ARG_POINTER_CFA_OFFSET is 4 on arm).
++   * But we want to use this frontend for EmitBuiltinDwarfCFA() debugging
++   * on x86.
++   * ARG_POINTER_CFA_OFFSET(exp) is always zero for x86, c.f.
++   * llvm-gcc-4.2/gcc/config/i386/i386.h
++   */
++#if 1
++  int cfa_offset = 0;
++#else
+   int cfa_offset = ARG_POINTER_CFA_OFFSET(exp);
+-
++#endif
++  /* @LOCALMOD-END */
++     
+   // FIXME: is i32 always enough here?
+   Result = Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
+                                                         Intrinsic::eh_dwarf_cfa),
+@@ -6683,6 +6736,11 @@
+ }
+ 
+ bool TreeToLLVM::EmitBuiltinInitDwarfRegSizes(tree exp, Value *&/*Result*/) {
++  /*
++   * @LOCALMOD - carefully revisit this for ARM
++   * Note, this built-in is only used by  llvm-gcc-4.2/gcc/unwind-dw2.c
++   *  __builtin_init_dwarf_reg_size_table
++   */
+ #ifdef DWARF2_UNWIND_INFO
+   unsigned int i;
+   bool wrote_return_column = false;
+@@ -6831,6 +6889,14 @@
+   return true;
+ }
+ 
++bool TreeToLLVM::EmitBuiltinVAArg(tree exp, Value *&Result) {
++  // Emit an llvm.va_arg opcode for the call to __builtin_va_arg.
++  Result = Builder.CreateVAArg(
++      Emit(TREE_VALUE(TREE_OPERAND(exp, 1)), 0),
++      ConvertType(TREE_TYPE(exp))); // (the type info was faked earlier)
++  return true;
++}
++
+ bool TreeToLLVM::EmitBuiltinVACopy(tree exp) {
+   tree Arg1T = TREE_VALUE(TREE_OPERAND(exp, 1));
+   tree Arg2T = TREE_VALUE(TREE_CHAIN(TREE_OPERAND(exp, 1)));
+diff -r 8405d3453566 gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/llvm-internal.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -570,6 +570,7 @@
+   bool EmitBuiltinExtendPointer(tree_node *exp, Value *&Result);
+   bool EmitBuiltinVAStart(tree_node *exp);
+   bool EmitBuiltinVAEnd(tree_node *exp);
++  bool EmitBuiltinVAArg(tree_node *exp, Value *&Result);
+   bool EmitBuiltinVACopy(tree_node *exp);
+   bool EmitBuiltinMemCopy(tree_node *exp, Value *&Result,
+                           bool isMemMove, bool SizeCheck);
+diff -r 8405d3453566 gcc/llvm.h
+--- a/gcc/llvm.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/llvm.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -116,6 +116,14 @@
+  * to the more concrete type new_type.
+  */
+ void refine_type_to (union tree_node*, union tree_node*);
++
++/* @LOCALMOD-BEGIN */
++/* Note that we are about to emit non-portable bits into llvm bitcode.
++ * This may generate a warning, an error, or nothing, depending on flags.
++ */
++void note_nonportable_llvm(const char *mesg);
++/* @LOCALMOD-END */
++
+ #endif /* ENABLE_LLVM */
+ 
+ #endif
+diff -r 8405d3453566 gcc/longlong.h
+--- a/gcc/longlong.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/longlong.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -97,6 +97,15 @@
+    (E.g. WE32100, IBM360.)  */
+ 
+ /* LLVM LOCAL begin */
++/* @LOCALMOD-START
++ * disable inline assembly for now and fall back to the generic versions
++ * the LLVM backend will likely generate inline code for these anyway
++ */
++#if !defined (NO_ASM)
++#define NO_ASM
++#endif
++/* @LOCALMOD-END */
++
+ #if defined (__GNUC__) && !defined (NO_ASM) && (!defined (ENABLE_LLVM) || !defined (__llvm__))
+ /* LLVM LOCAL end */
+ 
+diff -r 8405d3453566 gcc/mklibgcc.in
+--- a/gcc/mklibgcc.in	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/mklibgcc.in	Mon Jun 13 17:55:14 2011 -0700
+@@ -218,7 +218,9 @@
+   shlib_slibdir_qual=
+   libgcc_a=$dir/libgcc.a
+   libgcov_a=$dir/libgcov.a
+-  libgcc_eh_a=
++  # @LOCALMOD 
++  # always enable creation of libgcc_eh.a
++  libgcc_eh_a=$dir/libgcc_eh.a
+   libgcc_s_so=
+   libunwind_a=
+   libunwind_so=
+@@ -897,11 +899,16 @@
+   echo '	chmod 644'  ${ldir}/libgcov.a
+   echo '	$(RANLIB_FOR_TARGET)' ${ldir}/libgcov.a
+ 
+-  if [ "$SHLIB_LINK" ]; then
++  # @LOCALMOD
++  # move installation of libgcc_eh out of the SHLIB_LINK condition
++  # if [ "$SHLIB_LINK" ]; then
+     echo '	$(INSTALL_DATA)' ${dir}/libgcc_eh.a ${ldir}/
+     echo '	chmod 644'  ${ldir}/libgcc_eh.a
+     echo '	$(RANLIB_FOR_TARGET)' ${ldir}/libgcc_eh.a
+ 
++  # @LOCALMOD
++  if [ "$SHLIB_LINK" ]; then
++
+     shlib_slibdir_qual=
+     os_multilib_dir=`$GCC_FOR_TARGET $flags --print-multi-os-directory`
+     if [ "$os_multilib_dir" != . ]; then
+diff -r 8405d3453566 gcc/output.h
+--- a/gcc/output.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/output.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -200,9 +200,9 @@
+    DONT_OUTPUT_DATA is from assemble_variable.  */
+ extern void align_variable (tree decl, bool dont_output_data);
+ 
+-/* Queue for outputing something to declare an external symbol to the
+-   assembler.  (Most assemblers don't need this, so we normally output
+-   nothing.)  Do nothing if DECL is not external.  */
++/* Output something to declare an external symbol to the assembler.
++   (Most assemblers don't need this, so we normally output nothing.)
++   Do nothing if DECL is not external.  */
+ extern void assemble_external (tree);
+ 
+ /* Assemble code to leave SIZE bytes of zeros.  */
+@@ -607,10 +607,6 @@
+ extern void file_end_indicate_exec_stack (void);
+ extern bool default_valid_pointer_mode (enum machine_mode);
+ 
+-extern void default_elf_asm_output_external (FILE *file, tree,
+-					     const char *);
+-extern int maybe_assemble_visibility (tree);
+-
+ extern int default_address_cost (rtx);
+ 
+ /* dbxout helper functions */
+diff -r 8405d3453566 gcc/reload1.c
+--- a/gcc/reload1.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/reload1.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -5562,14 +5562,7 @@
+   for (j = 0; j < n_reloads; j++)
+     {
+       reload_order[j] = j;
+-      if (rld[j].reg_rtx != NULL_RTX)
+-	{
+-	  gcc_assert (REG_P (rld[j].reg_rtx)
+-		      && HARD_REGISTER_P (rld[j].reg_rtx));
+-	  reload_spill_index[j] = REGNO (rld[j].reg_rtx);
+-	}
+-      else
+-	reload_spill_index[j] = -1;
++      reload_spill_index[j] = -1;
+ 
+       if (rld[j].nregs > 1)
+ 	{
+diff -r 8405d3453566 gcc/simplify-rtx.c
+--- a/gcc/simplify-rtx.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/simplify-rtx.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -589,8 +589,7 @@
+       /* (neg (lt x 0)) is (ashiftrt X C) if STORE_FLAG_VALUE is 1.  */
+       /* (neg (lt x 0)) is (lshiftrt X C) if STORE_FLAG_VALUE is -1.  */
+       if (GET_CODE (op) == LT
+-	  && XEXP (op, 1) == const0_rtx
+-	  && SCALAR_INT_MODE_P (GET_MODE (XEXP (op, 0))))
++	  && XEXP (op, 1) == const0_rtx)
+ 	{
+ 	  enum machine_mode inner = GET_MODE (XEXP (op, 0));
+ 	  int isize = GET_MODE_BITSIZE (inner);
+diff -r 8405d3453566 gcc/toplev.c
+--- a/gcc/toplev.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/toplev.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -1168,7 +1168,9 @@
+ 
+   dw2_output_indirect_constants ();
+ 
+-  /* Flush any pending external directives.  */
++  /* Flush any pending external directives.  cgraph did this for
++     assemble_external calls from the front end, but the RTL
++     expander can also generate them.  */
+   process_pending_assemble_externals ();
+ 
+   /* Attach a special .ident directive to the end of the file to identify
+diff -r 8405d3453566 gcc/tree-if-conv.c
+--- a/gcc/tree-if-conv.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/tree-if-conv.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -743,7 +743,7 @@
+       if (TREE_CODE (*cond) == TRUTH_NOT_EXPR)
+ 	/* We can be smart here and choose inverted
+ 	   condition without switching bbs.  */
+-	*cond = invert_truthvalue (*cond);
++	  *cond = invert_truthvalue (*cond);
+       else
+ 	/* Select non loop header bb.  */
+ 	first_edge = second_edge;
+@@ -762,11 +762,9 @@
+ 
+   /* Create temp. for the condition. Vectorizer prefers to have gimple
+      value as condition. Various targets use different means to communicate
+-     condition in vector compare operation. Using gimple value allows
+-     compiler to emit vector compare and select RTL without exposing
+-     compare's result.  */
+-  *cond = force_gimple_operand (unshare_expr (*cond), &new_stmts,
+-				false, NULL_TREE);
++     condition in vector compare operation. Using gimple value allows compiler
++     to emit vector compare and select RTL without exposing compare's result.  */
++  *cond = force_gimple_operand (*cond, &new_stmts, false, NULL_TREE);
+   if (new_stmts)
+     bsi_insert_before (bsi, new_stmts, BSI_SAME_STMT);
+   if (!is_gimple_reg (*cond) && !is_gimple_condexpr (*cond))
+diff -r 8405d3453566 gcc/tree-ssa-structalias.c
+--- a/gcc/tree-ssa-structalias.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/tree-ssa-structalias.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -4350,75 +4350,6 @@
+   process_constraint (new_constraint (lhs, rhs));
+ }
+ 
+-/* Structure used to put solution bitmaps in a hashtable so they can
+-   be shared among variables with the same points-to set.  */
+-
+-typedef struct shared_bitmap_info
+-{
+-  bitmap pt_vars;
+-  hashval_t hashcode;
+-} *shared_bitmap_info_t;
+-
+-static htab_t shared_bitmap_table;
+-
+-/* Hash function for a shared_bitmap_info_t */
+-
+-static hashval_t
+-shared_bitmap_hash (const void *p)
+-{
+-  const shared_bitmap_info_t bi = (shared_bitmap_info_t) p;
+-  return bi->hashcode;
+-}
+-
+-/* Equality function for two shared_bitmap_info_t's. */
+-
+-static int
+-shared_bitmap_eq (const void *p1, const void *p2)
+-{
+-  const shared_bitmap_info_t sbi1 = (shared_bitmap_info_t) p1;
+-  const shared_bitmap_info_t sbi2 = (shared_bitmap_info_t) p2;
+-  return bitmap_equal_p (sbi1->pt_vars, sbi2->pt_vars);
+-}
+-
+-/* Lookup a bitmap in the shared bitmap hashtable, and return an already
+-   existing instance if there is one, NULL otherwise.  */
+-
+-static bitmap
+-shared_bitmap_lookup (bitmap pt_vars)
+-{
+-  void **slot;
+-  struct shared_bitmap_info sbi;
+-
+-  sbi.pt_vars = pt_vars;
+-  sbi.hashcode = bitmap_hash (pt_vars);
+-  
+-  slot = htab_find_slot_with_hash (shared_bitmap_table, &sbi,
+-				   sbi.hashcode, NO_INSERT);
+-  if (!slot)
+-    return NULL;
+-  else
+-    return ((shared_bitmap_info_t) *slot)->pt_vars;
+-}
+-
+-
+-/* Add a bitmap to the shared bitmap hashtable.  */
+-
+-static void
+-shared_bitmap_add (bitmap pt_vars)
+-{
+-  void **slot;
+-  shared_bitmap_info_t sbi = XNEW (struct shared_bitmap_info);
+-  
+-  sbi->pt_vars = pt_vars;
+-  sbi->hashcode = bitmap_hash (pt_vars);
+-  
+-  slot = htab_find_slot_with_hash (shared_bitmap_table, sbi,
+-				   sbi->hashcode, INSERT);
+-  gcc_assert (!*slot);
+-  *slot = (void *) sbi;
+-}
+-
+-
+ /* Set bits in INTO corresponding to the variable uids in solution set
+    FROM, which came from variable PTR.
+    For variables that are actually dereferenced, we also use type
+@@ -4529,9 +4460,7 @@
+ 	  struct ptr_info_def *pi = get_ptr_info (p);
+ 	  unsigned int i;
+ 	  bitmap_iterator bi;
+-	  bitmap finished_solution;
+-	  bitmap result;
+-	  
++
+ 	  /* This variable may have been collapsed, let's get the real
+ 	     variable.  */
+ 	  vi = get_varinfo (find (vi->id));
+@@ -4563,20 +4492,10 @@
+ 	  if (pi->pt_anything)
+ 	    return false;
+ 
+-	  finished_solution = BITMAP_GGC_ALLOC ();
+-	  set_uids_in_ptset (vi->decl, finished_solution, vi->solution);
+-	  result = shared_bitmap_lookup (finished_solution);
+-
+-	  if (!result)
+-	    {
+-	      shared_bitmap_add (finished_solution);
+-	      pi->pt_vars = finished_solution;
+-	    }
+-	  else
+-	    {
+-	      pi->pt_vars = result;
+-	      bitmap_clear (finished_solution);
+-	    }
++	  if (!pi->pt_vars)
++	    pi->pt_vars = BITMAP_GGC_ALLOC ();
++
++	  set_uids_in_ptset (vi->decl, pi->pt_vars, vi->solution);
+ 
+ 	  if (bitmap_empty_p (pi->pt_vars))
+ 	    pi->pt_vars = NULL;
+@@ -4772,8 +4691,6 @@
+   vi_for_tree = pointer_map_create ();
+ 
+   memset (&stats, 0, sizeof (stats));
+-  shared_bitmap_table = htab_create (511, shared_bitmap_hash,
+-				     shared_bitmap_eq, free);
+   init_base_vars ();
+ }
+ 
+@@ -5006,7 +4923,6 @@
+   varinfo_t v;
+   int i;
+ 
+-  htab_delete (shared_bitmap_table);
+   if (dump_file && (dump_flags & TDF_STATS))
+     fprintf (dump_file, "Points to sets created:%d\n",
+ 	     stats.points_to_sets_created);
+diff -r 8405d3453566 gcc/tree-vect-patterns.c
+--- a/gcc/tree-vect-patterns.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/tree-vect-patterns.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -499,9 +499,8 @@
+           || (icode = optab->handlers[(int) vec_mode].insn_code) ==
+               CODE_FOR_nothing
+           || (type_out
+-              && (!get_vectype_for_scalar_type (type_out)
+-                  || (insn_data[icode].operand[0].mode !=
+-                      TYPE_MODE (get_vectype_for_scalar_type (type_out))))))
++              && (insn_data[icode].operand[0].mode !=
++                  TYPE_MODE (get_vectype_for_scalar_type (type_out)))))
+ 	return;
+     }
+ 
+diff -r 8405d3453566 gcc/tree.c
+--- a/gcc/tree.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/tree.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -4636,8 +4636,7 @@
+ 	       && (HOST_WIDE_INT) TREE_INT_CST_LOW (t) >= 0)
+ 	      || (! pos && TREE_INT_CST_HIGH (t) == -1
+ 		  && (HOST_WIDE_INT) TREE_INT_CST_LOW (t) < 0
+-		  && (!TYPE_UNSIGNED (TREE_TYPE (t))
+-		      || TYPE_IS_SIZETYPE (TREE_TYPE (t))))
++		  && !TYPE_UNSIGNED (TREE_TYPE (t)))
+ 	      || (pos && TREE_INT_CST_HIGH (t) == 0)));
+ }
+ 
+@@ -6743,7 +6742,21 @@
+   layout_type (complex_long_double_type_node);
+ 
+   {
+-    tree t = targetm.build_builtin_va_list ();
++    /* @LOCALMOD-BEGIN */
++    tree t;
++    if (flag_use_llvm_va_arg)
++      {
++        /* If not expanding va_arg, make va_list large enough
++           so that the generated bitcode will work on all platforms.
++           (e.g., X86-64 needs exactly 24-bytes for va_list) */
++
++        t = build_array_type (
++                long_long_unsigned_type_node,
++                build_index_type (build_int_cst (NULL_TREE, 3-1)));
++      }
++    else
++        t = targetm.build_builtin_va_list ();
++    /* @LOCALMOD-END */
+ 
+     /* Many back-ends define record types without setting TYPE_NAME.
+        If we copied the record type here, we'd keep the original
+diff -r 8405d3453566 gcc/tree.h
+--- a/gcc/tree.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/tree.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -4591,6 +4591,7 @@
+ extern tree strip_float_extensions (tree);
+ extern tree c_strlen (tree, int);
+ extern tree std_gimplify_va_arg_expr (tree, tree, tree *, tree *);
++extern tree llvm_gimplify_va_arg_expr (tree, tree, tree *, tree *);
+ extern tree build_va_arg_indirect_ref (tree);
+ tree build_string_literal (int, const char *);
+ 
+diff -r 8405d3453566 gcc/unwind-c.c
+--- a/gcc/unwind-c.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/unwind-c.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -32,6 +32,20 @@
+ #include "tconfig.h"
+ #include "tsystem.h"
+ #include "unwind.h"
++
++
++/* On NaCl we want to avoid libgcc -> libc dependencies, and signals are
++   not implemented. */
++#ifdef __native_client__
++/* This would be slightly cleaner:
++ *  #define abort() asm("llvm.trap")
++ * but we have trouble with the inliner and bitcode at this point
++ * and llvm transforms the zero dereference into a trap internally anyway.
++ */
++
++#define abort() * (int*) 0 = 0
++#endif
++
+ #define NO_SIZE_OF_ENCODED_VALUE
+ #include "unwind-pe.h"
+ 
+@@ -82,6 +96,8 @@
+ }
+ 
+ #ifdef __ARM_EABI_UNWINDER__
++#error "PNACL does not want __ARM_EABI_UNWINDER__ to be defined"
++
+ /* ARM EABI personality routines must also unwind the stack.  */
+ #define CONTINUE_UNWINDING \
+   do								\
+diff -r 8405d3453566 gcc/unwind-dw2-fde.c
+--- a/gcc/unwind-dw2-fde.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/unwind-dw2-fde.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -258,6 +258,15 @@
+     }
+ }
+ 
++/* @LOCALMOD-START */
++/* avoid deps on libc */
++static int mystrlen(const char* cp) {
++  int count = 0;
++  while (*cp++) ++count;
++  return count;
++}
++/* @LOCALMOD-END */
++
+ /* Return the FDE pointer encoding from the CIE.  */
+ /* ??? This is a subset of extract_cie_info from unwind-dw2.c.  */
+ 
+@@ -273,7 +282,8 @@
+   if (aug[0] != 'z')
+     return DW_EH_PE_absptr;
+ 
+-  p = aug + strlen ((const char *)aug) + 1; /* Skip the augmentation string.  */
++  // @LOCALMOD
++  p = aug + mystrlen ((const char *)aug) + 1; /* Skip the augmentation string.  */
+   p = read_uleb128 (p, &utmp);		/* Skip code alignment.  */
+   p = read_sleb128 (p, &stmp);		/* Skip data alignment.  */
+   if (cie->version == 1)		/* Skip return address column.  */
+@@ -578,6 +588,13 @@
+       fde_split (ob, fde_compare, accu->linear, accu->erratic);
+       gcc_assert (accu->linear->count + accu->erratic->count == count);
+       frame_heapsort (ob, fde_compare, accu->erratic);
++      // @LOCALMOD-BEGIN
++      // Sorting just the erratic and then merging with the linear,
++      // can still leave it unsorted sometimes. Sort the linear as well!
++      // Triggered by:
++      // http://code.google.com/p/nativeclient/issues/detail?id=1106
++      frame_heapsort (ob, fde_compare, accu->linear);
++      // @LOCALMOD-END
+       fde_merge (ob, fde_compare, accu->linear, accu->erratic);
+       free (accu->erratic);
+     }
+diff -r 8405d3453566 gcc/unwind-dw2.c
+--- a/gcc/unwind-dw2.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/unwind-dw2.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -60,6 +60,23 @@
+ #define DWARF_REG_TO_UNWIND_COLUMN(REGNO) (REGNO)
+ #endif
+ 
++/* @LOCALMOD-START */
++/* avoid deps on libc - note: regions are extremely small and do not overlap */
++static void mybzero(char* cp, int len) {
++  for(;len > 0; --len) *cp++ = 0;
++}
++
++static int mystrlen(const char* cp) {
++  int count = 0;
++  while (*cp++) ++count;
++  return count;
++}
++
++static void mymemcpy(char* dst, const char* src, int len) {
++  for(;len > 0; --len) *dst++ = *src++;
++}
++/* @LOCALMOD-END */
++
+ /* This is the register and unwind state for a particular frame.  This
+    provides the information necessary to unwind up past a frame and return
+    to its caller.  */
+@@ -82,6 +99,34 @@
+   char by_value[DWARF_FRAME_REGISTERS+1];
+ };
+ 
++/* @LOCALMOD-START */
++#if 0
++void DUMP_CONTEXT(struct _Unwind_Context* c) {
++  int i;
++  printf("--------  _Unwind_Context: %p, cfa: %p,  ra: %p, lsda: %p\n",
++         c, c->cfa, c->ra, c->lsda);
++  for (i = 0; i < DWARF_FRAME_REGISTERS+1; i++) {
++    printf("reg %2d: %p (by val %d)", i, c->reg[i], c->by_value[i]);
++    if  (!c->by_value[i] && c->reg[i] != 0) { 
++      printf(" -> %p", *(void**)c->reg[i]);
++    }
++    printf(" \n");
++  }
++}
++
++void DUMP_FS(_Unwind_FrameState* fs) {
++  int i;
++  printf("--------  _Unwind_FrameState: %p, pc: %p\n", fs, fs->pc);
++  printf("cfa offset:%d, reg: %d, how: %d\n", 
++	 fs->cfa_offset, fs->cfa_reg, fs->cfa_how);
++  for (i = 0; i < DWARF_FRAME_REGISTERS+1; i++) {
++    printf("reg %2d, loc:%d, how:%d\n",
++           i, fs->regs.reg[i].loc.reg, fs->regs.reg[i].how);
++  }
++}
++#endif
++/* @LOCALMOD-END */
++
+ /* Byte size of every register managed by these routines.  */
+ static unsigned char dwarf_reg_size_table[DWARF_FRAME_REGISTERS+1];
+ 
+@@ -163,12 +208,10 @@
+   if (index == DWARF_ZERO_REG)
+     return 0;
+ #endif
+-
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+   gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
+   size = dwarf_reg_size_table[index];
+   ptr = context->reg[index];
+-
+   if (_Unwind_IsExtendedContext (context) && context->by_value[index])
+     return (_Unwind_Word) (_Unwind_Internal_Ptr) ptr;
+ 
+@@ -225,6 +268,68 @@
+     }
+ }
+ 
++/* @LOCALMOD-START */
++/*
++ * new ABI functions to support a platform independent version
++ * of libstdc++
++ * NOTE: this is only inline because we follow the model of the other
++ * functions - that those are marked 'inline' seems questionable
++ *
++ */
++
++/* abstract away __builtin_eh_return_data_regno(0) 
++ * this needs to be better researched and documented 
++ * the index is likely influenced by  DWARF_FRAME_REGNUM(REG) and
++ * EH_RETURN_DATA_REGNO
++ * c.f.: expand_builtin_eh_return_data_regno()
++ *
++ * NOTE: when gcc restores registers it relies on epilog code
++ * of the function containing the call to __builtin_eh_return
++ * (usually via the uw_install_context(CURRENT, TARGET) macro).
++ *
++ * If the epilog code does NOT restore the two result regs we
++ * are toast - there is run-time check which sadly
++ * results in a silent abort built into uw_install_context_1()
++ * look for the first gcc_assert
++ */
++ 
++inline void
++_Unwind_PNaClSetResult0 (struct _Unwind_Context *context, _Unwind_Word val) {
++#if defined(__x86_64__)
++  _Unwind_SetGR(context, 0, val);
++  return;
++#elif defined(__i386__)
++  _Unwind_SetGR(context, 0, val);
++  return;
++#elif defined(__arm__)
++  _Unwind_SetGR(context, 4, val);  /* first callee saved reg on ARM */
++  return;
++#else
++  #error "unknown platform"
++  abort();
++#endif
++
++}
++
++/* abstract away __builtin_eh_return_data_regno(1) */
++inline  void
++_Unwind_PNaClSetResult1 (struct _Unwind_Context *context, _Unwind_Word val) {
++#if defined(__x86_64__)
++  _Unwind_SetGR(context, 1, val);
++  return;
++#elif defined(__i386__)
++  _Unwind_SetGR(context, 2, val);
++  return;
++#elif defined(__arm__)
++  _Unwind_SetGR(context, 5, val);  /* second callee saved reg on ARM */
++  return;
++#else
++  #error "unknown platform"
++  abort();
++#endif
++}
++/* @LOCALMOD-END */
++
+ /* Get the pointer to a register INDEX as saved in CONTEXT.  */
+ 
+ static inline void *
+@@ -347,7 +452,7 @@
+ 		  _Unwind_FrameState *fs)
+ {
+   const unsigned char *aug = cie->augmentation;
+-  const unsigned char *p = aug + strlen ((const char *)aug) + 1;
++  const unsigned char *p = aug + mystrlen ((const char *)aug) + 1;
+   const unsigned char *ret = NULL;
+   _Unwind_Word utmp;
+ 
+@@ -1096,7 +1201,7 @@
+   const struct dwarf_cie *cie;
+   const unsigned char *aug, *insn, *end;
+ 
+-  memset (fs, 0, sizeof (*fs));
++  mybzero (fs, sizeof (*fs));   /* @LOCALMOD */
+   context->args_size = 0;
+   context->lsda = 0;
+ 
+@@ -1127,6 +1232,7 @@
+ 
+   /* First decode all the insns in the CIE.  */
+   end = (unsigned char *) next_fde ((struct dwarf_fde *) cie);
++
+   execute_cfa_program (insn, end, context, fs);
+ 
+   /* Locate augmentation for the fde.  */
+@@ -1181,7 +1287,7 @@
+   _Unwind_FrameState fs;
+   int reg;
+ 
+-  memset (&context, 0, sizeof (struct _Unwind_Context));
++  mybzero (&context, sizeof (struct _Unwind_Context));   /* @LOCALMOD */
+   context.flags = EXTENDED_CONTEXT_BIT;
+   context.ra = pc_target + 1;
+ 
+@@ -1363,7 +1469,6 @@
+ uw_update_context (struct _Unwind_Context *context, _Unwind_FrameState *fs)
+ {
+   uw_update_context_1 (context, fs);
+-
+   /* Compute the return address now, since the return address column
+      can change from frame to frame.  */
+   context->ra = __builtin_extract_return_addr
+@@ -1405,7 +1510,7 @@
+   _Unwind_SpTmp sp_slot;
+   _Unwind_Reason_Code code;
+ 
+-  memset (context, 0, sizeof (struct _Unwind_Context));
++  mybzero (context, sizeof (struct _Unwind_Context));  /* @LOCALMOD */
+   context->ra = ra;
+   context->flags = EXTENDED_CONTEXT_BIT;
+ 
+@@ -1452,6 +1557,23 @@
+     }									 \
+   while (0)
+ 
++
++/* LOCAMOD-START */
++/* Copy some register state from the target context to the current context.
++   The target context is roughly the saved register area of the function
++   called by the function we want to jump back into.
++   We copy this information into the saved register area of the currently
++   executing function F.
++   This is counter intuitive but when the epilog code of F is run we
++   get the effect of a mini longjmp.
++   This longjmp has two short commings, though:
++   * it does not set the pc
++   * it may not set the sp
++   This is compensated by the following built-in:
++   __builtin_eh_return (offset, handler);	
++ */
++/* LOCAMOD-END */
++ 
+ static long
+ uw_install_context_1 (struct _Unwind_Context *current,
+ 		      struct _Unwind_Context *target)
+@@ -1477,17 +1599,19 @@
+ 	  if (dwarf_reg_size_table[i] == sizeof (_Unwind_Word))
+ 	    {
+ 	      w = (_Unwind_Internal_Ptr) t;
+-	      memcpy (c, &w, sizeof (_Unwind_Word));
++	      mymemcpy (c, &w, sizeof (_Unwind_Word)); /* @LOCALMOD */
++
+ 	    }
+ 	  else
+ 	    {
+ 	      gcc_assert (dwarf_reg_size_table[i] == sizeof (_Unwind_Ptr));
+ 	      p = (_Unwind_Internal_Ptr) t;
+-	      memcpy (c, &p, sizeof (_Unwind_Ptr));
++	      mymemcpy (c, &p, sizeof (_Unwind_Ptr)); /* @LOCALMOD */
++
+ 	    }
+ 	}
+       else if (t && c && t != c)
+-	memcpy (c, t, dwarf_reg_size_table[i]);
++	mymemcpy (c, t, dwarf_reg_size_table[i]); /* @LOCALMOD */
+     }
+ 
+   /* If the current frame doesn't have a saved stack pointer, then we
+@@ -1534,7 +1658,13 @@
+ alias (_Unwind_Resume);
+ alias (_Unwind_Resume_or_Rethrow);
+ alias (_Unwind_SetGR);
++/* @LOCALMOD-START */
++alias (_Unwind_PNaClSetResult0);
++alias (_Unwind_PNaClSetResult1);
++/* @LOCALMOD-END */
+ alias (_Unwind_SetIP);
+ #endif
+ 
+ #endif /* !USING_SJLJ_EXCEPTIONS */
++
++/* @LOCALMOD-END */
+diff -r 8405d3453566 gcc/unwind-generic.h
+--- a/gcc/unwind-generic.h	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/unwind-generic.h	Mon Jun 13 17:55:14 2011 -0700
+@@ -92,6 +92,17 @@
+   _Unwind_Word private_1;
+   _Unwind_Word private_2;
+ 
++  // @LOCALMOD-START
++  // some extra space to help with libgcc_eh on x86-64 which thinks this
++  // structure is bigger than what the bitcode thinks and hence
++  // when private_1/private_2 are written to they might write over
++  // the end of the struct into the exception which the bitcode places
++  // immediately after it
++  // c.f. http://code.google.com/p/nativeclient/issues/detail?id=1107
++  // An array of size 4 would likely suffice - 8 plays it safe
++  int _do_not_use[8];
++  // @LOCALMOD-END
++
+   /* @@@ The IA-64 ABI says that this structure must be double-word aligned.
+      Taking that literally does not make much sense generically.  Instead we
+      provide the maximum alignment required by any type for the machine.  */
+@@ -158,6 +169,12 @@
+ extern _Unwind_Ptr _Unwind_GetIPInfo (struct _Unwind_Context *, int *);
+ extern void _Unwind_SetIP (struct _Unwind_Context *, _Unwind_Ptr);
+ 
++
++/* @LOCALMOD-START */
++extern void _Unwind_PNaClSetResult0 (struct _Unwind_Context *, _Unwind_Word);
++extern void _Unwind_PNaClSetResult1 (struct _Unwind_Context *, _Unwind_Word);
++/* @LOCALMOD-END */
++
+ /* @@@ Retrieve the CFA of the given context.  */
+ extern _Unwind_Word _Unwind_GetCFA (struct _Unwind_Context *);
+ 
+diff -r 8405d3453566 gcc/varasm.c
+--- a/gcc/varasm.c	Thu Jan 27 21:38:44 2011 +0000
++++ b/gcc/varasm.c	Mon Jun 13 17:55:14 2011 -0700
+@@ -131,6 +131,7 @@
+ static unsigned min_align (unsigned, unsigned);
+ static void output_constructor (tree, unsigned HOST_WIDE_INT, unsigned int);
+ static void globalize_decl (tree);
++static void maybe_assemble_visibility (tree);
+ #ifdef BSS_SECTION_ASM_OP
+ #ifdef ASM_OUTPUT_BSS
+ static void asm_output_bss (FILE *, tree, const char *,
+@@ -2101,10 +2102,11 @@
+   if (!DECL_P (decl) || !DECL_EXTERNAL (decl) || !TREE_PUBLIC (decl))
+     return;
+ 
+-  /* We want to output external symbols at very last to check if they
+-     are references or not.  */
+-  pending_assemble_externals = tree_cons (0, decl,
+-					  pending_assemble_externals);
++  if (flag_unit_at_a_time)
++    pending_assemble_externals = tree_cons (0, decl,
++					    pending_assemble_externals);
++  else
++    assemble_external_real (decl);
+ #endif
+ }
+ 
+@@ -5371,18 +5373,13 @@
+ 
+ /* A helper function to call assemble_visibility when needed for a decl.  */
+ 
+-int
++static void
+ maybe_assemble_visibility (tree decl)
+ {
+   enum symbol_visibility vis = DECL_VISIBILITY (decl);
+ 
+   if (vis != VISIBILITY_DEFAULT)
+-    {
+-      targetm.asm_out.visibility (decl, vis);
+-      return 1;
+-    }
+-  else
+-    return 0;
++    targetm.asm_out.visibility (decl, vis);
+ }
+ 
+ /* Returns 1 if the target configuration supports defining public symbols
+@@ -6559,19 +6556,4 @@
+   /* LLVM LOCAL end */
+ }
+ 
+-/* Emit text to declare externally defined symbols. It is needed to
+-   properly support non-default visibility.  */
+-void
+-default_elf_asm_output_external (FILE *file ATTRIBUTE_UNUSED,
+-				 tree decl,
+-				 const char *name ATTRIBUTE_UNUSED)
+-{
+-  /* We output the name if and only if TREE_SYMBOL_REFERENCED is
+-     set in order to avoid putting out names that are never really
+-     used. */
+-  if (TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (decl))
+-      && targetm.binds_local_p (decl))
+-    maybe_assemble_visibility (decl);
+-}
+-
+ #include "gt-varasm.h"
+diff -r 8405d3453566 libstdc++-v3/libsupc++/eh_arm.cc
+--- a/libstdc++-v3/libsupc++/eh_arm.cc	Thu Jan 27 21:38:44 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_arm.cc	Mon Jun 13 17:55:14 2011 -0700
+@@ -30,6 +30,7 @@
+ #include <cxxabi.h>
+ #include "unwind-cxx.h"
+ 
++
+ #ifdef __ARM_EABI_UNWINDER__
+ 
+ using namespace __cxxabiv1;
+@@ -166,5 +167,4 @@
+ "	ldmfd\tsp!, {r1, r2, r3, r4}\n"
+ "	bl\t_Unwind_Resume @ Never returns\n");
+ #endif
+-
+ #endif
+diff -r 8405d3453566 libstdc++-v3/libsupc++/eh_personality.cc
+--- a/libstdc++-v3/libsupc++/eh_personality.cc	Thu Jan 27 21:38:44 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_personality.cc	Mon Jun 13 17:55:14 2011 -0700
+@@ -405,6 +405,7 @@
+   // virtual IP register point at the UCB.
+   ip = (_Unwind_Ptr) ue_header;
+   _Unwind_SetGR(context, 12, ip);
++
+ #else
+   __cxa_exception* xh = __get_exception_header_from_ue(ue_header);
+ 
+@@ -677,11 +678,13 @@
+ 
+   /* For targets with pointers smaller than the word size, we must extend the
+      pointer, and this extension is target dependent.  */
+-  _Unwind_SetGR (context, __builtin_eh_return_data_regno (0),
+-		 __builtin_extend_pointer (ue_header));
+-  _Unwind_SetGR (context, __builtin_eh_return_data_regno (1),
+-		 handler_switch_value);
++
++  /* @LOCALMOD-START */
++  _Unwind_PNaClSetResult0(context, __builtin_extend_pointer (ue_header));
++  _Unwind_PNaClSetResult1(context, handler_switch_value);
++  /* @LOCALMOD-END */
+   _Unwind_SetIP (context, landing_pad);
++
+ #ifdef __ARM_EABI_UNWINDER__
+   if (found_type == found_cleanup)
+     __cxa_begin_cleanup(ue_header);
+diff -r 8405d3453566 libstdc++-v3/libsupc++/eh_throw.cc
+--- a/libstdc++-v3/libsupc++/eh_throw.cc	Thu Jan 27 21:38:44 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_throw.cc	Mon Jun 13 17:55:14 2011 -0700
+@@ -52,6 +52,7 @@
+   __cxa_free_exception (header + 1);
+ }
+ 
++extern "C" void abort(void);
+ 
+ extern "C" void
+ __cxxabiv1::__cxa_throw (void *obj, std::type_info *tinfo, 

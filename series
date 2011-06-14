@@ -1,0 +1,6 @@
+llvm-gcc-0000-manualdiff.patch
+llvm-gcc-pnacl-0001-72-80ce86616af954925d78eef104fe22da67486331.patch
+llvm-gcc-pnacl-0001-73-91c7363e1296bbcd4e6b657582cf50594831c94c.patch
+llvm-gcc-pnacl-0002-74-38c54bef28493f72374c5cb8c6f488991fd56c06.patch
+llvm-gcc-pnacl-0003-75-cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b.patch
+llvm-gcc-pnacl-0004-76-9747397423656946cbb9324cef3fe9d5c74a5a58.patch

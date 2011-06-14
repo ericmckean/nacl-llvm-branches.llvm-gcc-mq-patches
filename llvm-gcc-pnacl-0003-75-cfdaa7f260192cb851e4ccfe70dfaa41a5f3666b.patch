@@ -1,0 +1,25 @@
+# HG changeset patch
+# User Derek Schuff <dschuff@google.com>
+# Date 1305751980 25200
+# Branch pnacl-sfi
+# Node ID cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b
+# Parent 6b80ff20cd7febe1cb708e6e43c4a32126c97117
+Don't define __linux__ in compiler:
+REVIEW=http://codereview.chromium.org/7045015/
+
+ From llvm-gcc-pnacl-0003-75-cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b.patch
+
+diff -r 6b80ff20cd7f gcc/config/linux.h
+--- a/gcc/config/linux.h	Thu Apr 07 07:08:50 2011 -0700
++++ b/gcc/config/linux.h	Mon Jun 13 17:55:56 2011 -0700
+@@ -76,10 +76,7 @@
+ 
+ #define LINUX_TARGET_OS_CPP_BUILTINS()				\
+     do {							\
+-	builtin_define ("__gnu_linux__");			\
+-	builtin_define_std ("linux");				\
+ 	builtin_define_std ("unix");				\
+-	builtin_assert ("system=linux");			\
+ 	builtin_assert ("system=unix");				\
+ 	builtin_assert ("system=posix");			\
+     } while (0)
