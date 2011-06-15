@@ -3,15 +3,15 @@
 # Date 1299527355 28800
 # Branch pnacl-sfi
 # Node ID 80ce86616af954925d78eef104fe22da67486331
-# Parent c39305b33b919bdb41211ebb293f3f3a69087182
+# Parent 5407a2ee7b6fd8a9a93ad93a46b4ab919cb9da45
 llvm-gcc changes to add intrinsics for elf starting, setjmp, and longjmp.
 http://codereview.chromium.org/6591043/
 
  From llvm-gcc-pnacl-0001-72-80ce86616af954925d78eef104fe22da67486331.patch
 
-diff -r c39305b33b91 gcc/builtins.def
---- a/gcc/builtins.def	Tue Jun 14 16:57:34 2011 -0700
-+++ b/gcc/builtins.def	Tue Jun 14 16:57:36 2011 -0700
+diff -r 5407a2ee7b6f gcc/builtins.def
+--- a/gcc/builtins.def	Tue Jun 14 16:59:30 2011 -0700
++++ b/gcc/builtins.def	Tue Jun 14 16:59:32 2011 -0700
 @@ -767,3 +767,13 @@
  
  /* OpenMP builtins.  */
@@ -26,9 +26,9 @@ diff -r c39305b33b91 gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
 +/* @LOCALMOD-END */
-diff -r c39305b33b91 gcc/llvm-convert.cpp
---- a/gcc/llvm-convert.cpp	Tue Jun 14 16:57:34 2011 -0700
-+++ b/gcc/llvm-convert.cpp	Tue Jun 14 16:57:36 2011 -0700
+diff -r 5407a2ee7b6f gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Tue Jun 14 16:59:30 2011 -0700
++++ b/gcc/llvm-convert.cpp	Tue Jun 14 16:59:32 2011 -0700
 @@ -6312,6 +6312,20 @@
        return true;
      }
@@ -134,9 +134,9 @@ diff -r c39305b33b91 gcc/llvm-convert.cpp
  }
 -
  /* LLVM LOCAL end (ENTIRE FILE!)  */
-diff -r c39305b33b91 gcc/llvm-internal.h
---- a/gcc/llvm-internal.h	Tue Jun 14 16:57:34 2011 -0700
-+++ b/gcc/llvm-internal.h	Tue Jun 14 16:57:36 2011 -0700
+diff -r 5407a2ee7b6f gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Tue Jun 14 16:59:30 2011 -0700
++++ b/gcc/llvm-internal.h	Tue Jun 14 16:59:32 2011 -0700
 @@ -614,6 +614,13 @@
    Value *EmitREAL_CST(tree_node *exp);
    Value *EmitCONSTRUCTOR(tree_node *exp, const MemRef *DestLoc);
