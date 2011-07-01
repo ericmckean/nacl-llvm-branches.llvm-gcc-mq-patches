@@ -4,3 +4,6 @@ llvm-gcc-pnacl-0001-73-91c7363e1296bbcd4e6b657582cf50594831c94c.patch
 llvm-gcc-pnacl-0002-74-38c54bef28493f72374c5cb8c6f488991fd56c06.patch
 llvm-gcc-pnacl-0003-75-cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b.patch
 llvm-gcc-pnacl-0004-76-9747397423656946cbb9324cef3fe9d5c74a5a58.patch
+pnacl-llvm-gcc-0006-77-f65c2a206cb94fc8d7c3f0ad97917cdf832ea3e4.patch
+pnacl-llvm-gcc-0007-78-90bef773193579eb5a46c6e5238ef1af5ae57ed2.patch
+pnacl-llvm-gcc-0008-79-7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3.patch

@@ -1,0 +1,167 @@
+# HG changeset patch
+# User robertm@google.com
+# Date 1307030374 14400
+# Branch pnacl-sfi
+# Node ID f65c2a206cb94fc8d7c3f0ad97917cdf832ea3e4
+# Parent c4cad9bf4f24ce1d27167c801abfb3ab88bd2ff7
+Use eh primitives introduced in
+
+http://codereview.chromium.org/7080056
+
+CL= http://codereview.chromium.org/7090004/
+
+ From pnacl-llvm-gcc-0006-77-f65c2a206cb94fc8d7c3f0ad97917cdf832ea3e4.patch
+
+diff -r c4cad9bf4f24 gcc/pnacl-unwind.h
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/gcc/pnacl-unwind.h	Fri Jul 01 15:30:40 2011 -0700
+@@ -0,0 +1,29 @@
++#ifndef PNACL_UNWIND_H
++#define PNACL_UNWIND_H
++
++/*
++ * NOTE: this value is insanely high and may cause issues if the stack is
++ * too small as arrays of length PNACL_MAX_DWARF_FRAME_REGISTERS
++ * are created on the stack by various unwind functions.
++ */
++
++/* NOTE: On itanium this value is 334 */
++#define PNACL_MAX_DWARF_FRAME_REGISTERS 512
++#ifdef DWARF_FRAME_REGISTERS
++#undef DWARF_FRAME_REGISTERS
++#endif
++
++/* hijack gcc's __builtin_dwarf_sp_column */
++#define __builtin_dwarf_sp_column() pnacl_unwind_dwarf_sp_column()
++
++/* hijack gcc's DWARF_FRAME_REGISTERS but only where syntactically possible
++   other places use PNACL_MAX_DWARF_FRAME_REGISTERS */
++#define  DWARF_FRAME_REGISTERS pnacl_unwind_dwarf_frame_registers()
++
++/* define in native_client/src/untrusted/stubs/unwind_support.c */
++extern int pnacl_unwind_dwarf_sp_column();
++extern int pnacl_unwind_result0_reg();
++extern int pnacl_unwind_result1_reg();
++extern int pnacl_unwind_dwarf_frame_registers();
++
++#endif /* PNACL_UNWIND_H */
+diff -r c4cad9bf4f24 gcc/unwind-dw2.c
+--- a/gcc/unwind-dw2.c	Fri May 20 16:08:37 2011 -0700
++++ b/gcc/unwind-dw2.c	Fri Jul 01 15:30:40 2011 -0700
+@@ -51,6 +51,8 @@
+ #define STACK_GROWS_DOWNWARD 1
+ #endif
+ 
++#include "pnacl-unwind.h" /* @LOCALMOD */
++
+ /* Dwarf frame registers used for pre gcc 3.0 compiled glibc.  */
+ #ifndef PRE_GCC3_DWARF_FRAME_REGISTERS
+ #define PRE_GCC3_DWARF_FRAME_REGISTERS DWARF_FRAME_REGISTERS
+@@ -82,7 +84,7 @@
+    to its caller.  */
+ struct _Unwind_Context
+ {
+-  void *reg[DWARF_FRAME_REGISTERS+1];
++  void *reg[PNACL_MAX_DWARF_FRAME_REGISTERS+1]; /* @LOCALMOD */
+   void *cfa;
+   void *ra;
+   void *lsda;
+@@ -96,7 +98,7 @@
+      struct _Unwind_Context.  */
+   _Unwind_Word version;
+   _Unwind_Word args_size;
+-  char by_value[DWARF_FRAME_REGISTERS+1];
++  char by_value[PNACL_MAX_DWARF_FRAME_REGISTERS+1]; /* @LOCALMOD */
+ };
+ 
+ /* @LOCALMOD-START */
+@@ -128,7 +130,8 @@
+ /* @LOCALMOD-END */
+ 
+ /* Byte size of every register managed by these routines.  */
+-static unsigned char dwarf_reg_size_table[DWARF_FRAME_REGISTERS+1];
++/* @LOCALMOD */
++static unsigned char dwarf_reg_size_table[PNACL_MAX_DWARF_FRAME_REGISTERS+1];
+ 
+ 
+ /* Read unaligned data from the instruction buffer.  */
+@@ -295,38 +298,13 @@
+  
+ inline void
+ _Unwind_PNaClSetResult0 (struct _Unwind_Context *context, _Unwind_Word val) {
+-#if defined(__x86_64__)
+-  _Unwind_SetGR(context, 0, val);
+-  return;
+-#elif defined(__i386__)
+-  _Unwind_SetGR(context, 0, val);
+-  return;
+-#elif defined(__arm__)
+-  _Unwind_SetGR(context, 4, val);  /* first callee saved reg on ARM */
+-  return;
+-#else
+-  #error "unknown platform"
+-  abort();
+-#endif
+-
++  _Unwind_SetGR(context, pnacl_unwind_result0_reg(), val);
+ }
+ 
+ /* abstract away __builtin_eh_return_data_regno(1) */
+ inline  void
+ _Unwind_PNaClSetResult1 (struct _Unwind_Context *context, _Unwind_Word val) {
+-#if defined(__x86_64__)
+-  _Unwind_SetGR(context, 1, val);
+-  return;
+-#elif defined(__i386__)
+-  _Unwind_SetGR(context, 2, val);
+-  return;
+-#elif defined(__arm__)
+-  _Unwind_SetGR(context, 5, val);  /* second callee saved reg on ARM */
+-  return;
+-#else
+-  #error "unknown platform"
+-  abort();
+-#endif
++  _Unwind_SetGR(context, pnacl_unwind_result1_reg(), val);
+ }
+ /* @LOCALMOD-END */
+ 
+@@ -1268,10 +1246,10 @@
+   void *eh_ptr;
+   long cfa_offset;
+   long args_size;
+-  long reg_or_offset[PRE_GCC3_DWARF_FRAME_REGISTERS+1];
++  long reg_or_offset[PNACL_MAX_DWARF_FRAME_REGISTERS+1];
+   unsigned short cfa_reg;
+   unsigned short retaddr_column;
+-  char saved[PRE_GCC3_DWARF_FRAME_REGISTERS+1];
++  char saved[PNACL_MAX_DWARF_FRAME_REGISTERS+1];
+ } frame_state;
+ 
+ struct frame_state * __frame_state_for (void *, struct frame_state *);
+diff -r c4cad9bf4f24 gcc/unwind-dw2.h
+--- a/gcc/unwind-dw2.h	Fri May 20 16:08:37 2011 -0700
++++ b/gcc/unwind-dw2.h	Fri Jul 01 15:30:40 2011 -0700
+@@ -34,6 +34,8 @@
+ #define DWARF_FRAME_REGISTERS FIRST_PSEUDO_REGISTER
+ #endif
+ 
++#include "pnacl-unwind.h" /* @LOCALMOD */
++
+ /* The result of interpreting the frame unwind info for a frame.
+    This is all symbolic at this point, as none of the values can
+    be resolved until the target pc is located.  */
+@@ -57,7 +59,7 @@
+ 	REG_SAVED_VAL_OFFSET,
+ 	REG_SAVED_VAL_EXP
+       } how;
+-    } reg[DWARF_FRAME_REGISTERS+1];
++    } reg[PNACL_MAX_DWARF_FRAME_REGISTERS+1];  /* @LOCALMOD */
+ 
+     /* Used to implement DW_CFA_remember_state.  */
+     struct frame_state_reg_info *prev;
+@@ -88,4 +90,3 @@
+   unsigned char signal_frame;
+   void *eh_ptr;
+ } _Unwind_FrameState;
+-
