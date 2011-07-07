@@ -3,7 +3,7 @@
 # Date 1309182198 14400
 # Branch pnacl-sfi
 # Node ID 8713c8955201ed075f41833a16b4215a968550c5
-# Parent ee2b8224b001c053316f45d6d1f1b037983f408a
+# Parent c295b0eff688b0b0634e05454324ad912dca8ea1
 Reduce our delta to vendor a little bit and help with the merge.
 
 As interesting side note: our stage1 step still builds
@@ -14,9 +14,9 @@ CL= http://codereview.chromium.org/7193015/
 
  From pnacl-llvm-gcc-0010-82-8713c8955201ed075f41833a16b4215a968550c5.patch
 
-diff -r ee2b8224b001 gcc/Makefile.in
+diff -r c295b0eff688 gcc/Makefile.in
 --- a/gcc/Makefile.in	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/Makefile.in	Fri Jul 01 16:22:48 2011 -0700
++++ b/gcc/Makefile.in	Wed Jul 06 23:46:07 2011 -0700
 @@ -605,7 +605,7 @@
  
  # libgcc.a may be built directly or via stmp-multilib,
@@ -35,9 +35,9 @@ diff -r ee2b8224b001 gcc/Makefile.in
  LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
  
  # LLVM LOCAL begin libcc_kext
-diff -r ee2b8224b001 gcc/config/arm/bpabi.S
+diff -r c295b0eff688 gcc/config/arm/bpabi.S
 --- a/gcc/config/arm/bpabi.S	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/config/arm/bpabi.S	Fri Jul 01 16:22:48 2011 -0700
++++ b/gcc/config/arm/bpabi.S	Wed Jul 06 23:46:07 2011 -0700
 @@ -81,7 +81,7 @@
  #ifdef L_aeabi_ldivmod
  
@@ -80,9 +80,9 @@ diff -r ee2b8224b001 gcc/config/arm/bpabi.S
  	do_pop {r2, r3}
  /* APPLE LOCAL end v7 support. Merge from mainline */
  	RET
-diff -r ee2b8224b001 gcc/config/arm/lib1funcs.asm
+diff -r c295b0eff688 gcc/config/arm/lib1funcs.asm
 --- a/gcc/config/arm/lib1funcs.asm	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/config/arm/lib1funcs.asm	Fri Jul 01 16:22:48 2011 -0700
++++ b/gcc/config/arm/lib1funcs.asm	Wed Jul 06 23:46:07 2011 -0700
 @@ -32,9 +32,6 @@
  
  /* We need to know what prefix to add to function names.  */
@@ -308,7 +308,7 @@ diff -r ee2b8224b001 gcc/config/arm/lib1funcs.asm
  
  #ifndef __symbian__
  #include "ieee754-df.S"
-diff -r ee2b8224b001 gcc/config/arm/naclmacros.asm
+diff -r c295b0eff688 gcc/config/arm/naclmacros.asm
 --- a/gcc/config/arm/naclmacros.asm	Thu Jun 23 09:47:51 2011 -0700
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,392 +0,0 @@
@@ -704,7 +704,7 @@ diff -r ee2b8224b001 gcc/config/arm/naclmacros.asm
 -
 -#define NACL_HALT         bkpt 0x6666
 -
-diff -r ee2b8224b001 gcc/libgcc-memcpy.c
+diff -r c295b0eff688 gcc/libgcc-memcpy.c
 --- a/gcc/libgcc-memcpy.c	Thu Jun 23 09:47:51 2011 -0700
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,40 +0,0 @@

@@ -3,15 +3,15 @@
 # Date 1308847671 25200
 # Branch pnacl-sfi
 # Node ID f14a2b825eeb359a17cea2303a5b03976da77182
-# Parent af201ed40b569ba7d042ed7dfe0129e8ff918047
+# Parent c94076d67c6f717b2634a2097f606604d3ec13f0
 # Parent  a24ea75295279d50f80819f55751a82efb73ad5f
 Merge tip and dangling tip.
 
  From pnacl-llvm-gcc-0009-81-f14a2b825eeb359a17cea2303a5b03976da77182.patch
 
-diff -r af201ed40b56 gcc/config/arm/arm.h
+diff -r c94076d67c6f gcc/config/arm/arm.h
 --- a/gcc/config/arm/arm.h	Wed Jun 22 16:34:56 2011 -0700
-+++ b/gcc/config/arm/arm.h	Fri Jul 01 16:22:44 2011 -0700
++++ b/gcc/config/arm/arm.h	Wed Jul 06 23:46:05 2011 -0700
 @@ -2554,7 +2554,7 @@
  /* signed 'char' is most compatible, but RISC OS wants it unsigned.
     unsigned is probably best, but may break some code.  */
@@ -21,9 +21,9 @@ diff -r af201ed40b56 gcc/config/arm/arm.h
  #endif
  
  /* Max number of bytes we can move from memory to memory
-diff -r af201ed40b56 gcc/config/arm/linux-gas.h
+diff -r c94076d67c6f gcc/config/arm/linux-gas.h
 --- a/gcc/config/arm/linux-gas.h	Wed Jun 22 16:34:56 2011 -0700
-+++ b/gcc/config/arm/linux-gas.h	Fri Jul 01 16:22:44 2011 -0700
++++ b/gcc/config/arm/linux-gas.h	Wed Jul 06 23:46:05 2011 -0700
 @@ -25,7 +25,7 @@
     GAS always supports weak symbols.  */
  

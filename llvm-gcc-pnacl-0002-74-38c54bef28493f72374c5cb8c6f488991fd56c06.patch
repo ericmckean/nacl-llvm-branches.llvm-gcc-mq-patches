@@ -3,14 +3,14 @@
 # Date 1302185330 25200
 # Branch pnacl-sfi
 # Node ID 38c54bef28493f72374c5cb8c6f488991fd56c06
-# Parent 8f2bc6b5df85b4cd8baf8755515519b190310492
+# Parent e10073ded8cedc0098b2f62f425b4b5a35ff4169
 Fix typo in ARM assembly libgcc macros
 
  From llvm-gcc-pnacl-0002-74-38c54bef28493f72374c5cb8c6f488991fd56c06.patch
 
-diff -r 8f2bc6b5df85 gcc/config/arm/lib1funcs.asm
+diff -r e10073ded8ce gcc/config/arm/lib1funcs.asm
 --- a/gcc/config/arm/lib1funcs.asm	Fri Mar 18 08:34:49 2011 -0700
-+++ b/gcc/config/arm/lib1funcs.asm	Mon Jun 13 17:55:52 2011 -0700
++++ b/gcc/config/arm/lib1funcs.asm	Wed Jul 06 23:45:54 2011 -0700
 @@ -213,28 +213,28 @@
  	bx	lr
  #else
