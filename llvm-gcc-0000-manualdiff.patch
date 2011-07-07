@@ -4,7 +4,7 @@ Initial import of 71:a24f3ae473c81f0b495003a0833d3d1d8b56b3d4 to svnrev(124444)
 
 diff -r 2ae861d1f5bd configure
 --- a/configure	Wed Mar 02 20:30:39 2011 +0000
-+++ b/configure	Wed Jul 06 23:45:47 2011 -0700
++++ b/configure	Thu Jul 07 10:50:02 2011 -0700
 @@ -2681,6 +2681,14 @@
  # $build_configdirs and $target_configdirs.
  # If we have the source for $noconfigdirs entries, add them to $notsupp.
@@ -536,7 +536,7 @@ diff -r 2ae861d1f5bd extras/build-darwin-x-mingw32-x-armeabi
 -
 diff -r 2ae861d1f5bd gcc/Makefile.in
 --- a/gcc/Makefile.in	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/Makefile.in	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/Makefile.in	Thu Jul 07 10:50:02 2011 -0700
 @@ -1684,7 +1684,7 @@
  #
  # Build libgcc.a.
@@ -548,7 +548,7 @@ diff -r 2ae861d1f5bd gcc/Makefile.in
  # LLVM LOCAL begin libcc_kext
 diff -r 2ae861d1f5bd gcc/builtins.c
 --- a/gcc/builtins.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/builtins.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/builtins.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -4359,6 +4359,30 @@
    return build_va_arg_indirect_ref (addr);
  }
@@ -597,7 +597,7 @@ diff -r 2ae861d1f5bd gcc/builtins.c
  }
 diff -r 2ae861d1f5bd gcc/builtins.def
 --- a/gcc/builtins.def	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/builtins.def	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/builtins.def	Thu Jul 07 10:50:02 2011 -0700
 @@ -702,6 +702,14 @@
  DEF_GCC_BUILTIN        (BUILT_IN_VA_COPY, "va_copy", BT_FN_VOID_VALIST_REF_VALIST_ARG, ATTR_NULL)
  DEF_GCC_BUILTIN        (BUILT_IN_VA_END, "va_end", BT_FN_VOID_VALIST_REF, ATTR_NULL)
@@ -615,7 +615,7 @@ diff -r 2ae861d1f5bd gcc/builtins.def
  
 diff -r 2ae861d1f5bd gcc/cgraphunit.c
 --- a/gcc/cgraphunit.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/cgraphunit.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/cgraphunit.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -1632,6 +1632,8 @@
        return;
      }
@@ -627,7 +627,7 @@ diff -r 2ae861d1f5bd gcc/cgraphunit.c
    cgraph_varpool_analyze_pending_decls ();
 diff -r 2ae861d1f5bd gcc/common.opt
 --- a/gcc/common.opt	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/common.opt	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/common.opt	Thu Jul 07 10:50:02 2011 -0700
 @@ -117,6 +117,16 @@
  Common Var(warn_padded)
  Warn when padding is required to align structure members
@@ -658,7 +658,7 @@ diff -r 2ae861d1f5bd gcc/common.opt
  Perform variable tracking
 diff -r 2ae861d1f5bd gcc/config.gcc
 --- a/gcc/config.gcc	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config.gcc	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config.gcc	Thu Jul 07 10:50:02 2011 -0700
 @@ -485,10 +485,6 @@
        tm_defines="${tm_defines} FBSD_MAJOR=8" ;;
      *-*-freebsd9 | *-*-freebsd[9].*)
@@ -681,7 +681,7 @@ diff -r 2ae861d1f5bd gcc/config.gcc
    gnu_ld=yes
 diff -r 2ae861d1f5bd gcc/config/arm/arm-tune.md
 --- a/gcc/config/arm/arm-tune.md	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/arm-tune.md	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/arm-tune.md	Thu Jul 07 10:50:02 2011 -0700
 @@ -1,5 +1,5 @@
  ;; -*- buffer-read-only: t -*-
  ;; Generated automatically by gentune.sh from arm-cores.def
@@ -691,7 +691,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/arm-tune.md
  	(const (symbol_ref "arm_tune")))
 diff -r 2ae861d1f5bd gcc/config/arm/arm.c
 --- a/gcc/config/arm/arm.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/arm.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/arm.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -456,8 +456,25 @@
  #undef TARGET_ASM_TTYPE
  #define TARGET_ASM_TTYPE arm_output_ttype
@@ -737,7 +737,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/arm.c
  
 diff -r 2ae861d1f5bd gcc/config/arm/arm.h
 --- a/gcc/config/arm/arm.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/arm.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/arm.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -402,6 +402,9 @@
  
  extern enum float_abi_type arm_float_abi;
@@ -769,7 +769,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/arm.h
  /* Register allocation in ARM Procedure Call Standard (as used on RISCiX):
 diff -r 2ae861d1f5bd gcc/config/arm/bpabi.S
 --- a/gcc/config/arm/bpabi.S	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/bpabi.S	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/bpabi.S	Thu Jul 07 10:50:02 2011 -0700
 @@ -81,7 +81,7 @@
  #ifdef L_aeabi_ldivmod
  
@@ -814,7 +814,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/bpabi.S
  	RET
 diff -r 2ae861d1f5bd gcc/config/arm/bpabi.h
 --- a/gcc/config/arm/bpabi.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/bpabi.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/bpabi.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -66,12 +66,20 @@
  #define RENAME_LIBRARY_SET ".set"
  #endif
@@ -839,7 +839,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/bpabi.h
  #define DECLARE_LIBRARY_RENAMES RENAME_LIBRARY (muldi3, lmul)
 diff -r 2ae861d1f5bd gcc/config/arm/lib1funcs.asm
 --- a/gcc/config/arm/lib1funcs.asm	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/lib1funcs.asm	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/lib1funcs.asm	Thu Jul 07 10:50:02 2011 -0700
 @@ -32,6 +32,9 @@
  
  /* We need to know what prefix to add to function names.  */
@@ -1067,7 +1067,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/lib1funcs.asm
  #include "ieee754-df.S"
 diff -r 2ae861d1f5bd gcc/config/arm/libunwind.S
 --- a/gcc/config/arm/libunwind.S	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/libunwind.S	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/libunwind.S	Thu Jul 07 10:50:02 2011 -0700
 @@ -26,6 +26,8 @@
     the Free Software Foundation, 51 Franklin Street, Fifth Floor,
     Boston, MA 02110-1301, USA.  */
@@ -1079,7 +1079,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/libunwind.S
  #include "lib1funcs.asm"
 diff -r 2ae861d1f5bd gcc/config/arm/linux-eabi.h
 --- a/gcc/config/arm/linux-eabi.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/linux-eabi.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/linux-eabi.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -33,8 +33,10 @@
  
  /* We default to a soft-float ABI so that binaries can run on all
@@ -1095,7 +1095,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/linux-eabi.h
     default.  */
 diff -r 2ae861d1f5bd gcc/config/arm/llvm-arm-target.h
 --- a/gcc/config/arm/llvm-arm-target.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/llvm-arm-target.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/llvm-arm-target.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -102,6 +102,27 @@
  #define LLVM_SHOULD_RETURN_VECTOR_AS_SHADOW(X, isBuiltin) \
    (TREE_INT_CST_LOW(TYPE_SIZE(X)) > 128)
@@ -1126,7 +1126,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/llvm-arm-target.h
  /* LLVM LOCAL end (ENTIRE FILE!)  */
 diff -r 2ae861d1f5bd gcc/config/arm/naclmacros.asm
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/gcc/config/arm/naclmacros.asm	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/naclmacros.asm	Thu Jul 07 10:50:02 2011 -0700
 @@ -0,0 +1,392 @@
 +@LOCALMOD_START - NativeClient SFI macros
 +  .macro sfi_long_based_on_pos p0 p1 p2 p3 val
@@ -1522,7 +1522,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/naclmacros.asm
 +
 diff -r 2ae861d1f5bd gcc/config/arm/pr-support.c
 --- a/gcc/config/arm/pr-support.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/pr-support.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/pr-support.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -27,10 +27,7 @@
     Boston, MA 02110-1301, USA.  */
  #include "unwind.h"
@@ -1537,7 +1537,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/pr-support.c
  /* Misc constants.  */
 diff -r 2ae861d1f5bd gcc/config/arm/t-bpabi
 --- a/gcc/config/arm/t-bpabi	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/t-bpabi	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/t-bpabi	Thu Jul 07 10:50:02 2011 -0700
 @@ -4,12 +4,15 @@
  # Add the BPABI C functions.
  LIB2FUNCS_EXTRA = $(srcdir)/config/arm/bpabi.c \
@@ -1561,7 +1561,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/t-bpabi
  SHLIB_MAPFILES += $(srcdir)/config/arm/libgcc-bpabi.ver
 diff -r 2ae861d1f5bd gcc/config/arm/t-symbian
 --- a/gcc/config/arm/t-symbian	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/t-symbian	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/t-symbian	Thu Jul 07 10:50:02 2011 -0700
 @@ -13,9 +13,12 @@
  	_fixsfsi _fixunssfsi
  
@@ -1580,7 +1580,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/t-symbian
  # multilib for those without -- using the soft-float ABI in both
 diff -r 2ae861d1f5bd gcc/config/arm/unwind-arm.c
 --- a/gcc/config/arm/unwind-arm.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/arm/unwind-arm.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/arm/unwind-arm.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -27,9 +27,7 @@
     Boston, MA 02110-1301, USA.  */
  #include "unwind.h"
@@ -1594,7 +1594,7 @@ diff -r 2ae861d1f5bd gcc/config/arm/unwind-arm.c
     declarations to avoid pulling in libsupc++ unnecessarily.  */
 diff -r 2ae861d1f5bd gcc/config/elfos.h
 --- a/gcc/config/elfos.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/elfos.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/elfos.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -496,13 +496,3 @@
          fprintf ((FILE), "\"\n");					\
      }									\
@@ -1611,7 +1611,7 @@ diff -r 2ae861d1f5bd gcc/config/elfos.h
 -#endif
 diff -r 2ae861d1f5bd gcc/config/i386/i386.h
 --- a/gcc/config/i386/i386.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/i386/i386.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/i386/i386.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -621,7 +621,8 @@
  
  /* target machine storage layout */
@@ -1624,7 +1624,7 @@ diff -r 2ae861d1f5bd gcc/config/i386/i386.h
     FPU, assume that the fpcw is set to extended precision; when using
 diff -r 2ae861d1f5bd gcc/config/i386/llvm-i386.cpp
 --- a/gcc/config/i386/llvm-i386.cpp	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/i386/llvm-i386.cpp	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/i386/llvm-i386.cpp	Thu Jul 07 10:50:02 2011 -0700
 @@ -1746,7 +1746,8 @@
      case X86_64_X87_CLASS:
      case X86_64_X87UP_CLASS:
@@ -1649,7 +1649,7 @@ diff -r 2ae861d1f5bd gcc/config/i386/llvm-i386.cpp
  
 diff -r 2ae861d1f5bd gcc/config/i386/t-crtfm
 --- a/gcc/config/i386/t-crtfm	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/i386/t-crtfm	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/i386/t-crtfm	Thu Jul 07 10:50:02 2011 -0700
 @@ -1,4 +1,6 @@
 -EXTRA_PARTS += crtfastmath.o
 +# @LOCALMOD we have our own startup code so we do not use this
@@ -1660,7 +1660,7 @@ diff -r 2ae861d1f5bd gcc/config/i386/t-crtfm
  	$(GCC_FOR_TARGET) $(LIBGCC2_CFLAGS) -msse -c \
 diff -r 2ae861d1f5bd gcc/config/i386/t-linux64
 --- a/gcc/config/i386/t-linux64	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/i386/t-linux64	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/i386/t-linux64	Thu Jul 07 10:50:02 2011 -0700
 @@ -22,7 +22,7 @@
  LIBGCC = stmp-multilib
  INSTALL_LIBGCC = install-multilib
@@ -1672,7 +1672,7 @@ diff -r 2ae861d1f5bd gcc/config/i386/t-linux64
  # The pushl in CTOR initialization interferes with frame pointer elimination.
 diff -r 2ae861d1f5bd gcc/config/i386/unix.h
 --- a/gcc/config/i386/unix.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/i386/unix.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/i386/unix.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -65,6 +65,12 @@
  #define TARGET_SUBTARGET_DEFAULT \
  	(MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS)
@@ -1688,7 +1688,7 @@ diff -r 2ae861d1f5bd gcc/config/i386/unix.h
  #define TARGET_SUBTARGET64_DEFAULT \
 diff -r 2ae861d1f5bd gcc/config/ia64/hpux.h
 --- a/gcc/config/ia64/hpux.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/ia64/hpux.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/ia64/hpux.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -144,6 +144,10 @@
     definitions, so do not use them in gthr-posix.h.  */
  #define GTHREAD_USE_WEAK 0
@@ -1702,7 +1702,7 @@ diff -r 2ae861d1f5bd gcc/config/ia64/hpux.h
  
 diff -r 2ae861d1f5bd gcc/config/ia64/ia64.c
 --- a/gcc/config/ia64/ia64.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/ia64/ia64.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/ia64/ia64.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -250,6 +250,10 @@
  static void ia64_output_dwarf_dtprel (FILE *, int, rtx)
       ATTRIBUTE_UNUSED;
@@ -1849,7 +1849,7 @@ diff -r 2ae861d1f5bd gcc/config/ia64/ia64.c
  /* Set SImode div/mod functions, init_integral_libfuncs only initializes
 diff -r 2ae861d1f5bd gcc/config/mips/predicates.md
 --- a/gcc/config/mips/predicates.md	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/mips/predicates.md	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/mips/predicates.md	Thu Jul 07 10:50:02 2011 -0700
 @@ -116,9 +116,7 @@
        /* If -mlong-calls, force all calls to use register addressing.  Also,
  	 if this function has the long_call attribute, we must use register
@@ -1863,7 +1863,7 @@ diff -r 2ae861d1f5bd gcc/config/mips/predicates.md
        /* Without explicit relocs, there is no special syntax for
 diff -r 2ae861d1f5bd gcc/config/sparc/sparc.h
 --- a/gcc/config/sparc/sparc.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/sparc/sparc.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/sparc/sparc.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -2488,8 +2488,5 @@
   */
  #define LLVM_TARGET_NAME Sparc
@@ -1875,7 +1875,7 @@ diff -r 2ae861d1f5bd gcc/config/sparc/sparc.h
  /* LLVM LOCAL end */
 diff -r 2ae861d1f5bd gcc/config/t-linux
 --- a/gcc/config/t-linux	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/config/t-linux	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/config/t-linux	Thu Jul 07 10:50:02 2011 -0700
 @@ -1,13 +1,25 @@
  # Compile crtbeginS.o and crtendS.o with pic.
  CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
@@ -1908,7 +1908,7 @@ diff -r 2ae861d1f5bd gcc/config/t-linux
 +
 diff -r 2ae861d1f5bd gcc/crtstuff.c
 --- a/gcc/crtstuff.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/crtstuff.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/crtstuff.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -51,6 +51,15 @@
  
     This file must be compiled with gcc.  */
@@ -1932,7 +1932,7 @@ diff -r 2ae861d1f5bd gcc/crtstuff.c
 +#endif /* @LOCALMOD-END */
 diff -r 2ae861d1f5bd gcc/dwarf2out.c
 --- a/gcc/dwarf2out.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/dwarf2out.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/dwarf2out.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -10600,7 +10600,7 @@
      return NULL_TREE;
    else if (!cgraph_global_info_ready
@@ -1998,7 +1998,7 @@ diff -r 2ae861d1f5bd gcc/dwarf2out.c
  	  break;
 diff -r 2ae861d1f5bd gcc/expr.c
 --- a/gcc/expr.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/expr.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/expr.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -5709,6 +5709,7 @@
    enum machine_mode mode = VOIDmode;
    tree offset = size_zero_node;
@@ -2056,7 +2056,7 @@ diff -r 2ae861d1f5bd gcc/expr.c
  
 diff -r 2ae861d1f5bd gcc/gimplify.c
 --- a/gcc/gimplify.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/gimplify.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/gimplify.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -3583,16 +3583,8 @@
    gcc_assert (TREE_CODE (*expr_p) == MODIFY_EXPR
  	      || TREE_CODE (*expr_p) == INIT_EXPR);
@@ -2091,7 +2091,7 @@ diff -r 2ae861d1f5bd gcc/gimplify.c
       before gimplifying any of the operands so that we can resolve any
 diff -r 2ae861d1f5bd gcc/libgcc-memcpy.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/gcc/libgcc-memcpy.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/libgcc-memcpy.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -0,0 +1,40 @@
 +/* memcpy copy for libgcc.  */
 +/* Copyright (C) 2010 Free Software Foundation, Inc.
@@ -2135,7 +2135,7 @@ diff -r 2ae861d1f5bd gcc/libgcc-memcpy.c
 +}
 diff -r 2ae861d1f5bd gcc/libgcc2.c
 --- a/gcc/libgcc2.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/libgcc2.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/libgcc2.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -42,6 +42,20 @@
  #endif
  /* APPLE LOCAL end libcc_kext */
@@ -2184,7 +2184,7 @@ diff -r 2ae861d1f5bd gcc/libgcc2.c
  #ifdef L_trampoline
 diff -r 2ae861d1f5bd gcc/llvm-backend.cpp
 --- a/gcc/llvm-backend.cpp	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/llvm-backend.cpp	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/llvm-backend.cpp	Thu Jul 07 10:50:02 2011 -0700
 @@ -1894,6 +1894,15 @@
  /// llvm_emit_file_scope_asm - Emit the specified string as a file-scope inline
  /// asm block.
@@ -2223,7 +2223,7 @@ diff -r 2ae861d1f5bd gcc/llvm-backend.cpp
  /// may have a leading \1 at this point; compensate.
 diff -r 2ae861d1f5bd gcc/llvm-convert.cpp
 --- a/gcc/llvm-convert.cpp	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/llvm-convert.cpp	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/llvm-convert.cpp	Thu Jul 07 10:50:02 2011 -0700
 @@ -4348,6 +4348,10 @@
      return 0;   // Just don't copy something into DestLoc.
    }
@@ -2372,7 +2372,7 @@ diff -r 2ae861d1f5bd gcc/llvm-convert.cpp
    tree Arg2T = TREE_VALUE(TREE_CHAIN(TREE_OPERAND(exp, 1)));
 diff -r 2ae861d1f5bd gcc/llvm-internal.h
 --- a/gcc/llvm-internal.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/llvm-internal.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/llvm-internal.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -570,6 +570,7 @@
    bool EmitBuiltinExtendPointer(tree_node *exp, Value *&Result);
    bool EmitBuiltinVAStart(tree_node *exp);
@@ -2383,7 +2383,7 @@ diff -r 2ae861d1f5bd gcc/llvm-internal.h
                            bool isMemMove, bool SizeCheck);
 diff -r 2ae861d1f5bd gcc/llvm.h
 --- a/gcc/llvm.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/llvm.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/llvm.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -116,6 +116,14 @@
   * to the more concrete type new_type.
   */
@@ -2401,7 +2401,7 @@ diff -r 2ae861d1f5bd gcc/llvm.h
  #endif
 diff -r 2ae861d1f5bd gcc/longlong.h
 --- a/gcc/longlong.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/longlong.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/longlong.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -97,6 +97,15 @@
     (E.g. WE32100, IBM360.)  */
  
@@ -2420,7 +2420,7 @@ diff -r 2ae861d1f5bd gcc/longlong.h
  
 diff -r 2ae861d1f5bd gcc/mklibgcc.in
 --- a/gcc/mklibgcc.in	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/mklibgcc.in	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/mklibgcc.in	Thu Jul 07 10:50:02 2011 -0700
 @@ -218,7 +218,9 @@
    shlib_slibdir_qual=
    libgcc_a=$dir/libgcc.a
@@ -2452,7 +2452,7 @@ diff -r 2ae861d1f5bd gcc/mklibgcc.in
      if [ "$os_multilib_dir" != . ]; then
 diff -r 2ae861d1f5bd gcc/output.h
 --- a/gcc/output.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/output.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/output.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -200,9 +200,9 @@
     DONT_OUTPUT_DATA is from assemble_variable.  */
  extern void align_variable (tree decl, bool dont_output_data);
@@ -2479,7 +2479,7 @@ diff -r 2ae861d1f5bd gcc/output.h
  /* dbxout helper functions */
 diff -r 2ae861d1f5bd gcc/reload1.c
 --- a/gcc/reload1.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/reload1.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/reload1.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -5562,14 +5562,7 @@
    for (j = 0; j < n_reloads; j++)
      {
@@ -2498,7 +2498,7 @@ diff -r 2ae861d1f5bd gcc/reload1.c
  	{
 diff -r 2ae861d1f5bd gcc/simplify-rtx.c
 --- a/gcc/simplify-rtx.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/simplify-rtx.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/simplify-rtx.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -589,8 +589,7 @@
        /* (neg (lt x 0)) is (ashiftrt X C) if STORE_FLAG_VALUE is 1.  */
        /* (neg (lt x 0)) is (lshiftrt X C) if STORE_FLAG_VALUE is -1.  */
@@ -2511,7 +2511,7 @@ diff -r 2ae861d1f5bd gcc/simplify-rtx.c
  	  int isize = GET_MODE_BITSIZE (inner);
 diff -r 2ae861d1f5bd gcc/toplev.c
 --- a/gcc/toplev.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/toplev.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/toplev.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -1168,7 +1168,9 @@
  
    dw2_output_indirect_constants ();
@@ -2525,7 +2525,7 @@ diff -r 2ae861d1f5bd gcc/toplev.c
    /* Attach a special .ident directive to the end of the file to identify
 diff -r 2ae861d1f5bd gcc/tree-if-conv.c
 --- a/gcc/tree-if-conv.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/tree-if-conv.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/tree-if-conv.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -743,7 +743,7 @@
        if (TREE_CODE (*cond) == TRUTH_NOT_EXPR)
  	/* We can be smart here and choose inverted
@@ -2552,7 +2552,7 @@ diff -r 2ae861d1f5bd gcc/tree-if-conv.c
    if (!is_gimple_reg (*cond) && !is_gimple_condexpr (*cond))
 diff -r 2ae861d1f5bd gcc/tree-ssa-structalias.c
 --- a/gcc/tree-ssa-structalias.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/tree-ssa-structalias.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/tree-ssa-structalias.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -4350,75 +4350,6 @@
    process_constraint (new_constraint (lhs, rhs));
  }
@@ -2684,7 +2684,7 @@ diff -r 2ae861d1f5bd gcc/tree-ssa-structalias.c
  	     stats.points_to_sets_created);
 diff -r 2ae861d1f5bd gcc/tree-vect-patterns.c
 --- a/gcc/tree-vect-patterns.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/tree-vect-patterns.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/tree-vect-patterns.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -499,9 +499,8 @@
            || (icode = optab->handlers[(int) vec_mode].insn_code) ==
                CODE_FOR_nothing
@@ -2699,7 +2699,7 @@ diff -r 2ae861d1f5bd gcc/tree-vect-patterns.c
  
 diff -r 2ae861d1f5bd gcc/tree.c
 --- a/gcc/tree.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/tree.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/tree.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -4636,8 +4636,7 @@
  	       && (HOST_WIDE_INT) TREE_INT_CST_LOW (t) >= 0)
  	      || (! pos && TREE_INT_CST_HIGH (t) == -1
@@ -2735,7 +2735,7 @@ diff -r 2ae861d1f5bd gcc/tree.c
         If we copied the record type here, we'd keep the original
 diff -r 2ae861d1f5bd gcc/tree.h
 --- a/gcc/tree.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/tree.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/tree.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -4591,6 +4591,7 @@
  extern tree strip_float_extensions (tree);
  extern tree c_strlen (tree, int);
@@ -2746,7 +2746,7 @@ diff -r 2ae861d1f5bd gcc/tree.h
  
 diff -r 2ae861d1f5bd gcc/unwind-c.c
 --- a/gcc/unwind-c.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/unwind-c.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/unwind-c.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -32,6 +32,20 @@
  #include "tconfig.h"
  #include "tsystem.h"
@@ -2779,7 +2779,7 @@ diff -r 2ae861d1f5bd gcc/unwind-c.c
    do								\
 diff -r 2ae861d1f5bd gcc/unwind-dw2-fde.c
 --- a/gcc/unwind-dw2-fde.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/unwind-dw2-fde.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/unwind-dw2-fde.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -258,6 +258,15 @@
      }
  }
@@ -2822,7 +2822,7 @@ diff -r 2ae861d1f5bd gcc/unwind-dw2-fde.c
      }
 diff -r 2ae861d1f5bd gcc/unwind-dw2.c
 --- a/gcc/unwind-dw2.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/unwind-dw2.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/unwind-dw2.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -60,6 +60,23 @@
  #define DWARF_REG_TO_UNWIND_COLUMN(REGNO) (REGNO)
  #endif
@@ -3079,7 +3079,7 @@ diff -r 2ae861d1f5bd gcc/unwind-dw2.c
 +/* @LOCALMOD-END */
 diff -r 2ae861d1f5bd gcc/unwind-generic.h
 --- a/gcc/unwind-generic.h	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/unwind-generic.h	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/unwind-generic.h	Thu Jul 07 10:50:02 2011 -0700
 @@ -92,6 +92,17 @@
    _Unwind_Word private_1;
    _Unwind_Word private_2;
@@ -3113,7 +3113,7 @@ diff -r 2ae861d1f5bd gcc/unwind-generic.h
  
 diff -r 2ae861d1f5bd gcc/varasm.c
 --- a/gcc/varasm.c	Wed Mar 02 20:30:39 2011 +0000
-+++ b/gcc/varasm.c	Wed Jul 06 23:45:47 2011 -0700
++++ b/gcc/varasm.c	Thu Jul 07 10:50:02 2011 -0700
 @@ -131,6 +131,7 @@
  static unsigned min_align (unsigned, unsigned);
  static void output_constructor (tree, unsigned HOST_WIDE_INT, unsigned int);
@@ -3181,7 +3181,7 @@ diff -r 2ae861d1f5bd gcc/varasm.c
  #include "gt-varasm.h"
 diff -r 2ae861d1f5bd libstdc++-v3/libsupc++/eh_arm.cc
 --- a/libstdc++-v3/libsupc++/eh_arm.cc	Wed Mar 02 20:30:39 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_arm.cc	Wed Jul 06 23:45:47 2011 -0700
++++ b/libstdc++-v3/libsupc++/eh_arm.cc	Thu Jul 07 10:50:02 2011 -0700
 @@ -30,6 +30,7 @@
  #include <cxxabi.h>
  #include "unwind-cxx.h"
@@ -3198,7 +3198,7 @@ diff -r 2ae861d1f5bd libstdc++-v3/libsupc++/eh_arm.cc
  #endif
 diff -r 2ae861d1f5bd libstdc++-v3/libsupc++/eh_personality.cc
 --- a/libstdc++-v3/libsupc++/eh_personality.cc	Wed Mar 02 20:30:39 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_personality.cc	Wed Jul 06 23:45:47 2011 -0700
++++ b/libstdc++-v3/libsupc++/eh_personality.cc	Thu Jul 07 10:50:02 2011 -0700
 @@ -405,6 +405,7 @@
    // virtual IP register point at the UCB.
    ip = (_Unwind_Ptr) ue_header;
@@ -3227,7 +3227,7 @@ diff -r 2ae861d1f5bd libstdc++-v3/libsupc++/eh_personality.cc
      __cxa_begin_cleanup(ue_header);
 diff -r 2ae861d1f5bd libstdc++-v3/libsupc++/eh_throw.cc
 --- a/libstdc++-v3/libsupc++/eh_throw.cc	Wed Mar 02 20:30:39 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_throw.cc	Wed Jul 06 23:45:47 2011 -0700
++++ b/libstdc++-v3/libsupc++/eh_throw.cc	Thu Jul 07 10:50:02 2011 -0700
 @@ -52,6 +52,7 @@
    __cxa_free_exception (header + 1);
  }

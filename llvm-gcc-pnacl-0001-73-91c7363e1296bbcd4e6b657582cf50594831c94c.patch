@@ -3,16 +3,16 @@
 # Date 1300462489 25200
 # Branch pnacl-sfi
 # Node ID 91c7363e1296bbcd4e6b657582cf50594831c94c
-# Parent 4176299e45b4ec76a07f8a0167c19066cb1cead2
+# Parent c97fded84734ddc07a748b0caab0cd06d225a440
 Add intrinsics for TLS support to remove src/untrusted/stubs/crt_*.S
 BUG=http://code.google.com/p/nativeclient/issues/detail?id=1519
 TEST=none (yet)
 
  From llvm-gcc-pnacl-0001-73-91c7363e1296bbcd4e6b657582cf50594831c94c.patch
 
-diff -r 4176299e45b4 gcc/builtin-types.def
+diff -r c97fded84734 gcc/builtin-types.def
 --- a/gcc/builtin-types.def	Mon Mar 07 11:49:15 2011 -0800
-+++ b/gcc/builtin-types.def	Wed Jul 06 23:45:52 2011 -0700
++++ b/gcc/builtin-types.def	Thu Jul 07 10:50:07 2011 -0700
 @@ -141,6 +141,10 @@
  DEF_FUNCTION_TYPE_0 (BT_FN_DFLOAT32, BT_DFLOAT32)
  DEF_FUNCTION_TYPE_0 (BT_FN_DFLOAT64, BT_DFLOAT64)
@@ -35,9 +35,9 @@ diff -r 4176299e45b4 gcc/builtin-types.def
  
  DEF_POINTER_TYPE (BT_PTR_FN_VOID_PTR, BT_FN_VOID_PTR)
  
-diff -r 4176299e45b4 gcc/builtins.def
+diff -r c97fded84734 gcc/builtins.def
 --- a/gcc/builtins.def	Mon Mar 07 11:49:15 2011 -0800
-+++ b/gcc/builtins.def	Wed Jul 06 23:45:52 2011 -0700
++++ b/gcc/builtins.def	Thu Jul 07 10:50:07 2011 -0700
 @@ -774,6 +774,13 @@
  	       false, false, true, ATTRS, false, true)
  
@@ -52,9 +52,9 @@ diff -r 4176299e45b4 gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_TDB_EFFECTIVE_PAYLOAD_SIZE, "nacl_tdb_effective_payload_size", BT_FN_SIZE_SIZE, ATTR_NOTHROW_LIST)
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_RETURN_ADDRESS_SIZE, "nacl_return_address_size", BT_FN_SIZE, ATTR_NOTHROW_LIST)
  /* @LOCALMOD-END */
-diff -r 4176299e45b4 gcc/llvm-convert.cpp
+diff -r c97fded84734 gcc/llvm-convert.cpp
 --- a/gcc/llvm-convert.cpp	Mon Mar 07 11:49:15 2011 -0800
-+++ b/gcc/llvm-convert.cpp	Wed Jul 06 23:45:52 2011 -0700
++++ b/gcc/llvm-convert.cpp	Thu Jul 07 10:50:07 2011 -0700
 @@ -6325,6 +6325,22 @@
    case BUILT_IN_NACL_LONGJMP:
      Result = EmitNaClLongjmp(exp);
@@ -193,9 +193,9 @@ diff -r 4176299e45b4 gcc/llvm-convert.cpp
  // @LOCALMOD-END
  
  
-diff -r 4176299e45b4 gcc/llvm-internal.h
+diff -r c97fded84734 gcc/llvm-internal.h
 --- a/gcc/llvm-internal.h	Mon Mar 07 11:49:15 2011 -0800
-+++ b/gcc/llvm-internal.h	Wed Jul 06 23:45:52 2011 -0700
++++ b/gcc/llvm-internal.h	Thu Jul 07 10:50:07 2011 -0700
 @@ -619,6 +619,10 @@
    Value *EmitNaClElfStart(tree_node *exp);
    Value *EmitNaClSetjmp(tree_node *exp);

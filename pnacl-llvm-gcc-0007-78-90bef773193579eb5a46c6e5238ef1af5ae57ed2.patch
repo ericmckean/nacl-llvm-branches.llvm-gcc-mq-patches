@@ -3,7 +3,7 @@
 # Date 1307555221 14400
 # Branch pnacl-sfi
 # Node ID 90bef773193579eb5a46c6e5238ef1af5ae57ed2
-# Parent ca89d728d732ea1a3b17836b7f01adad34448b90
+# Parent 60083018966088905b3a685371ca52c963916c56
 This CL adds a few hacks to libgcc_eh to make it work for x86-64:
 
 * it adds a call to the new "intrinsic" pnacl_unwind_init_dwarf_reg_size_table
@@ -29,9 +29,9 @@ CL= http://codereview.chromium.org/7054087/
 
  From pnacl-llvm-gcc-0007-78-90bef773193579eb5a46c6e5238ef1af5ae57ed2.patch
 
-diff -r ca89d728d732 gcc/pnacl-unwind.h
+diff -r 600830189660 gcc/pnacl-unwind.h
 --- a/gcc/pnacl-unwind.h	Thu Jun 02 11:59:34 2011 -0400
-+++ b/gcc/pnacl-unwind.h	Wed Jul 06 23:46:02 2011 -0700
++++ b/gcc/pnacl-unwind.h	Thu Jul 07 10:50:16 2011 -0700
 @@ -25,5 +25,6 @@
  extern int pnacl_unwind_result0_reg();
  extern int pnacl_unwind_result1_reg();
@@ -39,9 +39,9 @@ diff -r ca89d728d732 gcc/pnacl-unwind.h
 +extern int pnacl_unwind_init_dwarf_reg_size_table();
  
  #endif /* PNACL_UNWIND_H */
-diff -r ca89d728d732 gcc/unwind-dw2.c
+diff -r 600830189660 gcc/unwind-dw2.c
 --- a/gcc/unwind-dw2.c	Thu Jun 02 11:59:34 2011 -0400
-+++ b/gcc/unwind-dw2.c	Wed Jul 06 23:46:02 2011 -0700
++++ b/gcc/unwind-dw2.c	Thu Jul 07 10:50:16 2011 -0700
 @@ -46,6 +46,8 @@
  
  #ifndef STACK_GROWS_DOWNWARD

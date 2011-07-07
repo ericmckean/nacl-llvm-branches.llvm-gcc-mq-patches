@@ -3,16 +3,16 @@
 # Date 1308785696 25200
 # Branch pnacl-sfi
 # Node ID 7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3
-# Parent 4aa1f42209cbd2a2656671933bafb2c73a77ee78
+# Parent 02ad26d09864ea119a27bc57c807f925021062b9
 Change NaCl TLS layout intrinsics over to the new interface.
 Original patch from Roland.
 http://codereview.chromium.org/7218021/
 
  From pnacl-llvm-gcc-0008-79-7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3.patch
 
-diff -r 4aa1f42209cb gcc/builtin-types.def
+diff -r 02ad26d09864 gcc/builtin-types.def
 --- a/gcc/builtin-types.def	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/builtin-types.def	Wed Jul 06 23:46:03 2011 -0700
++++ b/gcc/builtin-types.def	Thu Jul 07 10:50:18 2011 -0700
 @@ -217,8 +217,8 @@
  DEF_FUNCTION_TYPE_1 (BT_FN_UINT64_UINT64, BT_UINT64, BT_UINT64)
  /* APPLE LOCAL end mainline bswap */
@@ -24,9 +24,9 @@ diff -r 4aa1f42209cb gcc/builtin-types.def
  /* @LOCALMOD-END */
  
  DEF_POINTER_TYPE (BT_PTR_FN_VOID_PTR, BT_FN_VOID_PTR)
-diff -r 4aa1f42209cb gcc/builtins.def
+diff -r 02ad26d09864 gcc/builtins.def
 --- a/gcc/builtins.def	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/builtins.def	Wed Jul 06 23:46:03 2011 -0700
++++ b/gcc/builtins.def	Thu Jul 07 10:50:18 2011 -0700
 @@ -779,8 +779,10 @@
  DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
  
@@ -42,9 +42,9 @@ diff -r 4aa1f42209cb gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_TP_TDB_OFFSET, "nacl_tp_tdb_offset", BT_FN_SSIZE_SIZE, ATTR_NOTHROW_LIST)
 +
  /* @LOCALMOD-END */
-diff -r 4aa1f42209cb gcc/llvm-convert.cpp
+diff -r 02ad26d09864 gcc/llvm-convert.cpp
 --- a/gcc/llvm-convert.cpp	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/llvm-convert.cpp	Wed Jul 06 23:46:03 2011 -0700
++++ b/gcc/llvm-convert.cpp	Thu Jul 07 10:50:18 2011 -0700
 @@ -6326,21 +6326,22 @@
      Result = EmitNaClLongjmp(exp);
      return true;
@@ -159,9 +159,9 @@ diff -r 4aa1f42209cb gcc/llvm-convert.cpp
  // @LOCALMOD-END
  
  
-diff -r 4aa1f42209cb gcc/llvm-internal.h
+diff -r 02ad26d09864 gcc/llvm-internal.h
 --- a/gcc/llvm-internal.h	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/llvm-internal.h	Wed Jul 06 23:46:03 2011 -0700
++++ b/gcc/llvm-internal.h	Thu Jul 07 10:50:18 2011 -0700
 @@ -619,10 +619,11 @@
    Value *EmitNaClElfStart(tree_node *exp);
    Value *EmitNaClSetjmp(tree_node *exp);
