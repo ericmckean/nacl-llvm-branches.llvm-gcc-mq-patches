@@ -29,9 +29,9 @@ CL= http://codereview.chromium.org/7054087/
 
  From pnacl-llvm-gcc-0007-78-90bef773193579eb5a46c6e5238ef1af5ae57ed2.patch
 
-diff -r 4429ad53b817 gcc/pnacl-unwind.h
---- a/gcc/pnacl-unwind.h	Thu Jun 02 11:59:34 2011 -0400
-+++ b/gcc/pnacl-unwind.h	Fri Jul 01 15:30:44 2011 -0700
+diff -r 4429ad53b817 llvm-gcc-4.2/gcc/pnacl-unwind.h
+--- a/llvm-gcc-4.2/gcc/pnacl-unwind.h	Thu Jun 02 11:59:34 2011 -0400
++++ b/llvm-gcc-4.2/gcc/pnacl-unwind.h	Fri Jul 01 15:30:44 2011 -0700
 @@ -25,5 +25,6 @@
  extern int pnacl_unwind_result0_reg();
  extern int pnacl_unwind_result1_reg();
@@ -39,9 +39,9 @@ diff -r 4429ad53b817 gcc/pnacl-unwind.h
 +extern int pnacl_unwind_init_dwarf_reg_size_table();
  
  #endif /* PNACL_UNWIND_H */
-diff -r 4429ad53b817 gcc/unwind-dw2.c
---- a/gcc/unwind-dw2.c	Thu Jun 02 11:59:34 2011 -0400
-+++ b/gcc/unwind-dw2.c	Fri Jul 01 15:30:44 2011 -0700
+diff -r 4429ad53b817 llvm-gcc-4.2/gcc/unwind-dw2.c
+--- a/llvm-gcc-4.2/gcc/unwind-dw2.c	Thu Jun 02 11:59:34 2011 -0400
++++ b/llvm-gcc-4.2/gcc/unwind-dw2.c	Fri Jul 01 15:30:44 2011 -0700
 @@ -46,6 +46,8 @@
  
  #ifndef STACK_GROWS_DOWNWARD

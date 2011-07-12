@@ -12,9 +12,9 @@ CL= http://codereview.chromium.org/7090004/
 
  From pnacl-llvm-gcc-0006-77-f65c2a206cb94fc8d7c3f0ad97917cdf832ea3e4.patch
 
-diff -r c4cad9bf4f24 gcc/pnacl-unwind.h
+diff -r c4cad9bf4f24 llvm-gcc-4.2/gcc/pnacl-unwind.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/gcc/pnacl-unwind.h	Fri Jul 01 15:30:40 2011 -0700
++++ b/llvm-gcc-4.2/gcc/pnacl-unwind.h	Fri Jul 01 15:30:40 2011 -0700
 @@ -0,0 +1,29 @@
 +#ifndef PNACL_UNWIND_H
 +#define PNACL_UNWIND_H
@@ -45,9 +45,9 @@ diff -r c4cad9bf4f24 gcc/pnacl-unwind.h
 +extern int pnacl_unwind_dwarf_frame_registers();
 +
 +#endif /* PNACL_UNWIND_H */
-diff -r c4cad9bf4f24 gcc/unwind-dw2.c
---- a/gcc/unwind-dw2.c	Fri May 20 16:08:37 2011 -0700
-+++ b/gcc/unwind-dw2.c	Fri Jul 01 15:30:40 2011 -0700
+diff -r c4cad9bf4f24 llvm-gcc-4.2/gcc/unwind-dw2.c
+--- a/llvm-gcc-4.2/gcc/unwind-dw2.c	Fri May 20 16:08:37 2011 -0700
++++ b/llvm-gcc-4.2/gcc/unwind-dw2.c	Fri Jul 01 15:30:40 2011 -0700
 @@ -51,6 +51,8 @@
  #define STACK_GROWS_DOWNWARD 1
  #endif
@@ -139,9 +139,9 @@ diff -r c4cad9bf4f24 gcc/unwind-dw2.c
  } frame_state;
  
  struct frame_state * __frame_state_for (void *, struct frame_state *);
-diff -r c4cad9bf4f24 gcc/unwind-dw2.h
---- a/gcc/unwind-dw2.h	Fri May 20 16:08:37 2011 -0700
-+++ b/gcc/unwind-dw2.h	Fri Jul 01 15:30:40 2011 -0700
+diff -r c4cad9bf4f24 llvm-gcc-4.2/gcc/unwind-dw2.h
+--- a/llvm-gcc-4.2/gcc/unwind-dw2.h	Fri May 20 16:08:37 2011 -0700
++++ b/llvm-gcc-4.2/gcc/unwind-dw2.h	Fri Jul 01 15:30:40 2011 -0700
 @@ -34,6 +34,8 @@
  #define DWARF_FRAME_REGISTERS FIRST_PSEUDO_REGISTER
  #endif

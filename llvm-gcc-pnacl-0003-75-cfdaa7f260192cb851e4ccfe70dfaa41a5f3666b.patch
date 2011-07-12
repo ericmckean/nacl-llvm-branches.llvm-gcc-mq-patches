@@ -9,9 +9,9 @@ REVIEW=http://codereview.chromium.org/7045015/
 
  From llvm-gcc-pnacl-0003-75-cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b.patch
 
-diff -r 6b80ff20cd7f gcc/config/linux.h
---- a/gcc/config/linux.h	Thu Apr 07 07:08:50 2011 -0700
-+++ b/gcc/config/linux.h	Mon Jun 13 17:55:56 2011 -0700
+diff -r 6b80ff20cd7f llvm-gcc-4.2/gcc/config/linux.h
+--- a/llvm-gcc-4.2/gcc/config/linux.h	Thu Apr 07 07:08:50 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/linux.h	Mon Jun 13 17:55:56 2011 -0700
 @@ -76,10 +76,7 @@
  
  #define LINUX_TARGET_OS_CPP_BUILTINS()				\

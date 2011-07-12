@@ -10,9 +10,9 @@ http://codereview.chromium.org/7218021/
 
  From pnacl-llvm-gcc-0008-79-7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3.patch
 
-diff -r 1b6c375f93b5 gcc/builtin-types.def
---- a/gcc/builtin-types.def	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/builtin-types.def	Fri Jul 01 15:30:49 2011 -0700
+diff -r 1b6c375f93b5 llvm-gcc-4.2/gcc/builtin-types.def
+--- a/llvm-gcc-4.2/gcc/builtin-types.def	Wed Jun 08 13:47:01 2011 -0400
++++ b/llvm-gcc-4.2/gcc/builtin-types.def	Fri Jul 01 15:30:49 2011 -0700
 @@ -217,8 +217,8 @@
  DEF_FUNCTION_TYPE_1 (BT_FN_UINT64_UINT64, BT_UINT64, BT_UINT64)
  /* APPLE LOCAL end mainline bswap */
@@ -24,9 +24,9 @@ diff -r 1b6c375f93b5 gcc/builtin-types.def
  /* @LOCALMOD-END */
  
  DEF_POINTER_TYPE (BT_PTR_FN_VOID_PTR, BT_FN_VOID_PTR)
-diff -r 1b6c375f93b5 gcc/builtins.def
---- a/gcc/builtins.def	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/builtins.def	Fri Jul 01 15:30:49 2011 -0700
+diff -r 1b6c375f93b5 llvm-gcc-4.2/gcc/builtins.def
+--- a/llvm-gcc-4.2/gcc/builtins.def	Wed Jun 08 13:47:01 2011 -0400
++++ b/llvm-gcc-4.2/gcc/builtins.def	Fri Jul 01 15:30:49 2011 -0700
 @@ -779,8 +779,10 @@
  DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
  
@@ -42,9 +42,9 @@ diff -r 1b6c375f93b5 gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_TP_TDB_OFFSET, "nacl_tp_tdb_offset", BT_FN_SSIZE_SIZE, ATTR_NOTHROW_LIST)
 +
  /* @LOCALMOD-END */
-diff -r 1b6c375f93b5 gcc/llvm-convert.cpp
---- a/gcc/llvm-convert.cpp	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/llvm-convert.cpp	Fri Jul 01 15:30:49 2011 -0700
+diff -r 1b6c375f93b5 llvm-gcc-4.2/gcc/llvm-convert.cpp
+--- a/llvm-gcc-4.2/gcc/llvm-convert.cpp	Wed Jun 08 13:47:01 2011 -0400
++++ b/llvm-gcc-4.2/gcc/llvm-convert.cpp	Fri Jul 01 15:30:49 2011 -0700
 @@ -6326,21 +6326,22 @@
      Result = EmitNaClLongjmp(exp);
      return true;
@@ -159,9 +159,9 @@ diff -r 1b6c375f93b5 gcc/llvm-convert.cpp
  // @LOCALMOD-END
  
  
-diff -r 1b6c375f93b5 gcc/llvm-internal.h
---- a/gcc/llvm-internal.h	Wed Jun 08 13:47:01 2011 -0400
-+++ b/gcc/llvm-internal.h	Fri Jul 01 15:30:49 2011 -0700
+diff -r 1b6c375f93b5 llvm-gcc-4.2/gcc/llvm-internal.h
+--- a/llvm-gcc-4.2/gcc/llvm-internal.h	Wed Jun 08 13:47:01 2011 -0400
++++ b/llvm-gcc-4.2/gcc/llvm-internal.h	Fri Jul 01 15:30:49 2011 -0700
 @@ -619,10 +619,11 @@
    Value *EmitNaClElfStart(tree_node *exp);
    Value *EmitNaClSetjmp(tree_node *exp);

@@ -9,9 +9,9 @@ http://codereview.chromium.org/6591043/
 
  From llvm-gcc-pnacl-0001-72-80ce86616af954925d78eef104fe22da67486331.patch
 
-diff -r 7d1f659ac4b8 gcc/builtins.def
---- a/gcc/builtins.def	Mon Jun 13 17:55:32 2011 -0700
-+++ b/gcc/builtins.def	Mon Jun 13 17:55:35 2011 -0700
+diff -r 7d1f659ac4b8 llvm-gcc-4.2/gcc/builtins.def
+--- a/llvm-gcc-4.2/gcc/builtins.def	Mon Jun 13 17:55:32 2011 -0700
++++ b/llvm-gcc-4.2/gcc/builtins.def	Mon Jun 13 17:55:35 2011 -0700
 @@ -767,3 +767,13 @@
  
  /* OpenMP builtins.  */
@@ -26,9 +26,9 @@ diff -r 7d1f659ac4b8 gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
 +/* @LOCALMOD-END */
-diff -r 7d1f659ac4b8 gcc/llvm-convert.cpp
---- a/gcc/llvm-convert.cpp	Mon Jun 13 17:55:32 2011 -0700
-+++ b/gcc/llvm-convert.cpp	Mon Jun 13 17:55:35 2011 -0700
+diff -r 7d1f659ac4b8 llvm-gcc-4.2/gcc/llvm-convert.cpp
+--- a/llvm-gcc-4.2/gcc/llvm-convert.cpp	Mon Jun 13 17:55:32 2011 -0700
++++ b/llvm-gcc-4.2/gcc/llvm-convert.cpp	Mon Jun 13 17:55:35 2011 -0700
 @@ -6312,6 +6312,20 @@
        return true;
      }
@@ -134,9 +134,9 @@ diff -r 7d1f659ac4b8 gcc/llvm-convert.cpp
  }
 -
  /* LLVM LOCAL end (ENTIRE FILE!)  */
-diff -r 7d1f659ac4b8 gcc/llvm-internal.h
---- a/gcc/llvm-internal.h	Mon Jun 13 17:55:32 2011 -0700
-+++ b/gcc/llvm-internal.h	Mon Jun 13 17:55:35 2011 -0700
+diff -r 7d1f659ac4b8 llvm-gcc-4.2/gcc/llvm-internal.h
+--- a/llvm-gcc-4.2/gcc/llvm-internal.h	Mon Jun 13 17:55:32 2011 -0700
++++ b/llvm-gcc-4.2/gcc/llvm-internal.h	Mon Jun 13 17:55:35 2011 -0700
 @@ -614,6 +614,13 @@
    Value *EmitREAL_CST(tree_node *exp);
    Value *EmitCONSTRUCTOR(tree_node *exp, const MemRef *DestLoc);
