@@ -14,9 +14,9 @@ CL= http://codereview.chromium.org/7193015/
 
  From pnacl-llvm-gcc-0010-82-8713c8955201ed075f41833a16b4215a968550c5.patch
 
-diff -r 8f74237c6b96 gcc/Makefile.in
---- a/gcc/Makefile.in	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/Makefile.in	Thu Jul 07 10:50:22 2011 -0700
+diff -r 8f74237c6b96 llvm-gcc-4.2/gcc/Makefile.in
+--- a/llvm-gcc-4.2/gcc/Makefile.in	Thu Jun 23 09:47:51 2011 -0700
++++ b/llvm-gcc-4.2/gcc/Makefile.in	Thu Jul 07 10:50:22 2011 -0700
 @@ -605,7 +605,7 @@
  
  # libgcc.a may be built directly or via stmp-multilib,
@@ -35,9 +35,9 @@ diff -r 8f74237c6b96 gcc/Makefile.in
  LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
  
  # LLVM LOCAL begin libcc_kext
-diff -r 8f74237c6b96 gcc/config/arm/bpabi.S
---- a/gcc/config/arm/bpabi.S	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/config/arm/bpabi.S	Thu Jul 07 10:50:22 2011 -0700
+diff -r 8f74237c6b96 llvm-gcc-4.2/gcc/config/arm/bpabi.S
+--- a/llvm-gcc-4.2/gcc/config/arm/bpabi.S	Thu Jun 23 09:47:51 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/arm/bpabi.S	Thu Jul 07 10:50:22 2011 -0700
 @@ -81,7 +81,7 @@
  #ifdef L_aeabi_ldivmod
  
@@ -80,9 +80,9 @@ diff -r 8f74237c6b96 gcc/config/arm/bpabi.S
  	do_pop {r2, r3}
  /* APPLE LOCAL end v7 support. Merge from mainline */
  	RET
-diff -r 8f74237c6b96 gcc/config/arm/lib1funcs.asm
---- a/gcc/config/arm/lib1funcs.asm	Thu Jun 23 09:47:51 2011 -0700
-+++ b/gcc/config/arm/lib1funcs.asm	Thu Jul 07 10:50:22 2011 -0700
+diff -r 8f74237c6b96 llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm
+--- a/llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm	Thu Jun 23 09:47:51 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm	Thu Jul 07 10:50:22 2011 -0700
 @@ -32,9 +32,6 @@
  
  /* We need to know what prefix to add to function names.  */
@@ -308,8 +308,8 @@ diff -r 8f74237c6b96 gcc/config/arm/lib1funcs.asm
  
  #ifndef __symbian__
  #include "ieee754-df.S"
-diff -r 8f74237c6b96 gcc/config/arm/naclmacros.asm
---- a/gcc/config/arm/naclmacros.asm	Thu Jun 23 09:47:51 2011 -0700
+diff -r 8f74237c6b96 llvm-gcc-4.2/gcc/config/arm/naclmacros.asm
+--- a/llvm-gcc-4.2/gcc/config/arm/naclmacros.asm	Thu Jun 23 09:47:51 2011 -0700
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,392 +0,0 @@
 -@LOCALMOD_START - NativeClient SFI macros
@@ -704,8 +704,8 @@ diff -r 8f74237c6b96 gcc/config/arm/naclmacros.asm
 -
 -#define NACL_HALT         bkpt 0x6666
 -
-diff -r 8f74237c6b96 gcc/libgcc-memcpy.c
---- a/gcc/libgcc-memcpy.c	Thu Jun 23 09:47:51 2011 -0700
+diff -r 8f74237c6b96 llvm-gcc-4.2/gcc/libgcc-memcpy.c
+--- a/llvm-gcc-4.2/gcc/libgcc-memcpy.c	Thu Jun 23 09:47:51 2011 -0700
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,40 +0,0 @@
 -/* memcpy copy for libgcc.  */

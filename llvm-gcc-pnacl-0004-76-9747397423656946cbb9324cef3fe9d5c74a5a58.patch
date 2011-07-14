@@ -8,9 +8,9 @@ Make va_list 16-bytes instead of 24-bytes in llvm-gcc
 
  From llvm-gcc-pnacl-0004-76-9747397423656946cbb9324cef3fe9d5c74a5a58.patch
 
-diff -r 8cd1425be45a gcc/tree.c
---- a/gcc/tree.c	Wed May 18 13:53:00 2011 -0700
-+++ b/gcc/tree.c	Thu Jul 07 10:50:12 2011 -0700
+diff -r 8cd1425be45a llvm-gcc-4.2/gcc/tree.c
+--- a/llvm-gcc-4.2/gcc/tree.c	Wed May 18 13:53:00 2011 -0700
++++ b/llvm-gcc-4.2/gcc/tree.c	Thu Jul 07 10:50:12 2011 -0700
 @@ -6748,11 +6748,11 @@
        {
          /* If not expanding va_arg, make va_list large enough

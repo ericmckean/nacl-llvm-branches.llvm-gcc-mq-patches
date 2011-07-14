@@ -8,9 +8,9 @@ Fix typo in ARM assembly libgcc macros
 
  From llvm-gcc-pnacl-0002-74-38c54bef28493f72374c5cb8c6f488991fd56c06.patch
 
-diff -r 7d5222b6d18a gcc/config/arm/lib1funcs.asm
---- a/gcc/config/arm/lib1funcs.asm	Fri Mar 18 08:34:49 2011 -0700
-+++ b/gcc/config/arm/lib1funcs.asm	Thu Jul 07 10:50:09 2011 -0700
+diff -r 7d5222b6d18a llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm
+--- a/llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm	Fri Mar 18 08:34:49 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/arm/lib1funcs.asm	Thu Jul 07 10:50:09 2011 -0700
 @@ -213,28 +213,28 @@
  	bx	lr
  #else

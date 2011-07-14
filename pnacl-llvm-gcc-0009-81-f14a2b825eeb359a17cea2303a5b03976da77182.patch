@@ -9,9 +9,9 @@ Merge tip and dangling tip.
 
  From pnacl-llvm-gcc-0009-81-f14a2b825eeb359a17cea2303a5b03976da77182.patch
 
-diff -r 26cd8b02454e gcc/config/arm/arm.h
---- a/gcc/config/arm/arm.h	Wed Jun 22 16:34:56 2011 -0700
-+++ b/gcc/config/arm/arm.h	Thu Jul 07 10:50:20 2011 -0700
+diff -r 26cd8b02454e llvm-gcc-4.2/gcc/config/arm/arm.h
+--- a/llvm-gcc-4.2/gcc/config/arm/arm.h	Wed Jun 22 16:34:56 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/arm/arm.h	Thu Jul 07 10:50:20 2011 -0700
 @@ -2554,7 +2554,7 @@
  /* signed 'char' is most compatible, but RISC OS wants it unsigned.
     unsigned is probably best, but may break some code.  */
@@ -21,9 +21,9 @@ diff -r 26cd8b02454e gcc/config/arm/arm.h
  #endif
  
  /* Max number of bytes we can move from memory to memory
-diff -r 26cd8b02454e gcc/config/arm/linux-gas.h
---- a/gcc/config/arm/linux-gas.h	Wed Jun 22 16:34:56 2011 -0700
-+++ b/gcc/config/arm/linux-gas.h	Thu Jul 07 10:50:20 2011 -0700
+diff -r 26cd8b02454e llvm-gcc-4.2/gcc/config/arm/linux-gas.h
+--- a/llvm-gcc-4.2/gcc/config/arm/linux-gas.h	Wed Jun 22 16:34:56 2011 -0700
++++ b/llvm-gcc-4.2/gcc/config/arm/linux-gas.h	Thu Jul 07 10:50:20 2011 -0700
 @@ -25,7 +25,7 @@
     GAS always supports weak symbols.  */
  
