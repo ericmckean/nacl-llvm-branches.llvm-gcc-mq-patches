@@ -1,0 +1,35 @@
+# HG changeset patch
+# User Jan Voung <jvoung@google.com>
+# Date 1308847671 25200
+# Branch pnacl-sfi
+# Node ID f14a2b825eeb359a17cea2303a5b03976da77182
+# Parent c9ed624fc02de9ec2e07f16e5f4577bc78b6ea3c
+# Parent  a24ea75295279d50f80819f55751a82efb73ad5f
+Merge tip and dangling tip.
+
+ From llvm-gcc-0009-83-f14a2b825eeb359a17cea2303a5b03976da77182.patch
+
+diff -r c9ed624fc02d gcc/config/arm/arm.h
+--- a/gcc/config/arm/arm.h	Wed Jun 22 16:34:56 2011 -0700
++++ b/gcc/config/arm/arm.h	Mon Jul 18 18:46:50 2011 -0700
+@@ -2554,7 +2554,7 @@
+ /* signed 'char' is most compatible, but RISC OS wants it unsigned.
+    unsigned is probably best, but may break some code.  */
+ #ifndef DEFAULT_SIGNED_CHAR
+-#define DEFAULT_SIGNED_CHAR  0
++#define DEFAULT_SIGNED_CHAR  1 // @LOCALMOD
+ #endif
+ 
+ /* Max number of bytes we can move from memory to memory
+diff -r c9ed624fc02d gcc/config/arm/linux-gas.h
+--- a/gcc/config/arm/linux-gas.h	Wed Jun 22 16:34:56 2011 -0700
++++ b/gcc/config/arm/linux-gas.h	Mon Jul 18 18:46:50 2011 -0700
+@@ -25,7 +25,7 @@
+    GAS always supports weak symbols.  */
+ 
+ /* Unsigned chars produces much better code than signed.  */
+-#define DEFAULT_SIGNED_CHAR 0
++#define DEFAULT_SIGNED_CHAR 1 // @LOCALMOD
+ 
+ #undef  SUBTARGET_CPP_SPEC
+ #define SUBTARGET_CPP_SPEC  "%{posix:-D_POSIX_SOURCE} %{pthread:-D_REENTRANT}"
