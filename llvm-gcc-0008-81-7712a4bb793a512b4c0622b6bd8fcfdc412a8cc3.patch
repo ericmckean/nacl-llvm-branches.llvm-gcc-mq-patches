@@ -1,0 +1,180 @@
+# HG changeset patch
+# User Jan Voung <jvoung@google.com>
+# Date 1308785696 25200
+# Branch pnacl-sfi
+# Node ID 7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3
+# Parent b22fa516112e3c4f60cb501b3d34727672b81c30
+Change NaCl TLS layout intrinsics over to the new interface.
+Original patch from Roland.
+http://codereview.chromium.org/7218021/
+
+ From llvm-gcc-0008-81-7712a4bb793a512b4c0622b6bd8fcfdc412a8cc3.patch
+
+diff -r b22fa516112e gcc/builtin-types.def
+--- a/gcc/builtin-types.def	Wed Jun 08 13:47:01 2011 -0400
++++ b/gcc/builtin-types.def	Mon Jul 18 18:43:23 2011 -0700
+@@ -217,8 +217,8 @@
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT64_UINT64, BT_UINT64, BT_UINT64)
+ /* APPLE LOCAL end mainline bswap */
+ /* @LOCALMOD-BEGIN */
+-/* For PNaCl we need functions that return a size_t but take no parameters. */
+-DEF_FUNCTION_TYPE_1 (BT_FN_SIZE_SIZE, BT_SIZE, BT_SIZE)
++/* For PNaCl we need functions that take a size_t and return a ptrdiff_t.  */
++DEF_FUNCTION_TYPE_1 (BT_FN_SSIZE_SIZE, BT_SSIZE, BT_SIZE)
+ /* @LOCALMOD-END */
+ 
+ DEF_POINTER_TYPE (BT_PTR_FN_VOID_PTR, BT_FN_VOID_PTR)
+diff -r b22fa516112e gcc/builtins.def
+--- a/gcc/builtins.def	Wed Jun 08 13:47:01 2011 -0400
++++ b/gcc/builtins.def	Mon Jul 18 18:43:23 2011 -0700
+@@ -779,8 +779,10 @@
+ DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
+ 
+ /* Thread local storage support intrinsics. */
+-DEF_NACL_BUILTIN(BUILT_IN_NACL_TLS_ALIGNMENT, "nacl_tls_alignment", BT_FN_INT, ATTR_NOTHROW_LIST)
+-DEF_NACL_BUILTIN(BUILT_IN_NACL_TDB_OFFSET_IN_TLS, "nacl_tdb_offset_in_tls", BT_FN_SIZE_SIZE, ATTR_NOTHROW_LIST)
+-DEF_NACL_BUILTIN(BUILT_IN_NACL_TDB_EFFECTIVE_PAYLOAD_SIZE, "nacl_tdb_effective_payload_size", BT_FN_SIZE_SIZE, ATTR_NOTHROW_LIST)
+-DEF_NACL_BUILTIN(BUILT_IN_NACL_RETURN_ADDRESS_SIZE, "nacl_return_address_size", BT_FN_SIZE, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_THREAD_STACK_PADDING, "nacl_thread_stack_padding", BT_FN_SIZE, ATTR_NOTHROW_LIST)
++
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TP_ALIGNMENT, "nacl_tp_alignment", BT_FN_SIZE, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TP_TLS_OFFSET, "nacl_tp_tls_offset", BT_FN_SSIZE_SIZE, ATTR_NOTHROW_LIST)
++DEF_NACL_BUILTIN(BUILT_IN_NACL_TP_TDB_OFFSET, "nacl_tp_tdb_offset", BT_FN_SSIZE_SIZE, ATTR_NOTHROW_LIST)
++
+ /* @LOCALMOD-END */
+diff -r b22fa516112e gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Wed Jun 08 13:47:01 2011 -0400
++++ b/gcc/llvm-convert.cpp	Mon Jul 18 18:43:23 2011 -0700
+@@ -6326,21 +6326,22 @@
+     Result = EmitNaClLongjmp(exp);
+     return true;
+ 
+-  case BUILT_IN_NACL_TLS_ALIGNMENT:
+-    Result = EmitNaClTlsAlignment(exp);
++  case BUILT_IN_NACL_THREAD_STACK_PADDING:
++    Result = EmitNaClThreadStackPadding(exp);
+     return true;
+ 
+-  case BUILT_IN_NACL_TDB_OFFSET_IN_TLS:
+-    Result = EmitNaClTdbOffsetInTls(exp);
++  case BUILT_IN_NACL_TP_ALIGNMENT:
++    Result = EmitNaClTpAlignment(exp);
+     return true;
+ 
+-  case BUILT_IN_NACL_TDB_EFFECTIVE_PAYLOAD_SIZE:
+-    Result = EmitNaClTdbEffectivePayloadSize(exp);
++  case BUILT_IN_NACL_TP_TLS_OFFSET:
++    Result = EmitNaClTpTlsOffset(exp);
+     return true;
+ 
+-  case BUILT_IN_NACL_RETURN_ADDRESS_SIZE:
+-    Result = EmitNaClReturnAddressSize(exp);
++  case BUILT_IN_NACL_TP_TDB_OFFSET:
++    Result = EmitNaClTpTdbOffset(exp);
+     return true;
++
+   // @LOCALMOD-END
+   }
+   return false;
+@@ -8280,54 +8281,55 @@
+   return 0;
+ }
+ 
+-Value *TreeToLLVM::EmitNaClTlsAlignment(tree_node *exp) {
+-  Value *Call = Builder.CreateCall(
+-                    Intrinsic::getDeclaration(TheModule,
+-                                              Intrinsic::nacl_tls_alignment));
+-  return Call;
+-}
+-
+-Value *TreeToLLVM::EmitNaClTdbOffsetInTls(tree_node *exp) {
+-  tree ArgList = TREE_OPERAND(exp, 1);
+-
+-  if (!validate_arglist(ArgList, INTEGER_TYPE, VOID_TYPE)) {
+-    error("`__builtin_nacl_offset_in_tls' should take int");
+-  }
+-
+-  Value *TlsDataAndBssSize = Emit(TREE_VALUE(ArgList), 0);
+-
++Value *TreeToLLVM::EmitNaClThreadStackPadding(tree_node *exp) {
+   Value *Call = Builder.CreateCall(
+                     Intrinsic::getDeclaration(
+                         TheModule,
+-                        Intrinsic::nacl_tdb_offset_in_tls),
+-                    TlsDataAndBssSize);
++                        Intrinsic::nacl_thread_stack_padding));
+   return Call;
+ }
+ 
+-Value *TreeToLLVM::EmitNaClTdbEffectivePayloadSize(tree_node *exp) {
++Value *TreeToLLVM::EmitNaClTpAlignment(tree_node *exp) {
++  Value *Call = Builder.CreateCall(
++                    Intrinsic::getDeclaration(TheModule,
++                                              Intrinsic::nacl_tp_alignment));
++  return Call;
++}
++
++Value *TreeToLLVM::EmitNaClTpTlsOffset(tree_node *exp) {
+   tree ArgList = TREE_OPERAND(exp, 1);
+ 
+   if (!validate_arglist(ArgList, INTEGER_TYPE, VOID_TYPE)) {
+-    error("`__builtin_nacl_tdb_effective_payload_size' should take int");
+-  }
+-
+-  Value *TdbSize = Emit(TREE_VALUE(ArgList), 0);
++    error("`__builtin_nacl_tp_tls_offset' should take size_t");
++  }
++
++  Value *TlsSize = Emit(TREE_VALUE(ArgList), 0);
+ 
+   Value *Call = Builder.CreateCall(
+                     Intrinsic::getDeclaration(
+                         TheModule,
+-                        Intrinsic::nacl_tdb_effective_payload_size),
+-                    TdbSize);
++                        Intrinsic::nacl_tp_tls_offset),
++                    TlsSize);
+   return Call;
+ }
+ 
+-Value *TreeToLLVM::EmitNaClReturnAddressSize(tree_node *exp) {
++Value *TreeToLLVM::EmitNaClTpTdbOffset(tree_node *exp) {
++  tree ArgList = TREE_OPERAND(exp, 1);
++
++  if (!validate_arglist(ArgList, INTEGER_TYPE, VOID_TYPE)) {
++    error("`__builtin_nacl_tp_tdb_offset' should take size_t");
++  }
++
++  Value *TdbSize = Emit(TREE_VALUE(ArgList), 0);
++
+   Value *Call = Builder.CreateCall(
+                     Intrinsic::getDeclaration(
+                         TheModule,
+-                        Intrinsic::nacl_return_address_size));
++                        Intrinsic::nacl_tp_tdb_offset),
++                    TdbSize);
+   return Call;
+ }
++
+ // @LOCALMOD-END
+ 
+ 
+diff -r b22fa516112e gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Wed Jun 08 13:47:01 2011 -0400
++++ b/gcc/llvm-internal.h	Mon Jul 18 18:43:23 2011 -0700
+@@ -619,10 +619,11 @@
+   Value *EmitNaClElfStart(tree_node *exp);
+   Value *EmitNaClSetjmp(tree_node *exp);
+   Value *EmitNaClLongjmp(tree_node *exp);
+-  Value *EmitNaClTlsAlignment(tree_node *exp);
+-  Value *EmitNaClTdbOffsetInTls(tree_node *exp);
+-  Value *EmitNaClTdbEffectivePayloadSize(tree_node *exp);
+-  Value *EmitNaClReturnAddressSize(tree_node *exp);
++
++  Value *EmitNaClThreadStackPadding(tree_node *exp);
++  Value *EmitNaClTpAlignment(tree_node *exp);
++  Value *EmitNaClTpTlsOffset(tree_node *exp);
++  Value *EmitNaClTpTdbOffset(tree_node *exp);
+   // @LOCALMOD-END
+ 
+   // Optional target defined builtin intrinsic expanding function.

@@ -1,0 +1,28 @@
+# HG changeset patch
+# User David Meyer <pdox@google.com>
+# Date 1305932917 25200
+# Branch pnacl-sfi
+# Node ID 9747397423656946cbb9324cef3fe9d5c74a5a58
+# Parent fcc245ec6d890aa4eaadaf88697835af5fd2103e
+Make va_list 16-bytes instead of 24-bytes in llvm-gcc
+
+ From llvm-gcc-0005-78-9747397423656946cbb9324cef3fe9d5c74a5a58.patch
+
+diff -r fcc245ec6d89 gcc/tree.c
+--- a/gcc/tree.c	Wed May 18 13:53:00 2011 -0700
++++ b/gcc/tree.c	Mon Jul 18 18:43:10 2011 -0700
+@@ -6748,11 +6748,11 @@
+       {
+         /* If not expanding va_arg, make va_list large enough
+            so that the generated bitcode will work on all platforms.
+-           (e.g., X86-64 needs exactly 24-bytes for va_list) */
++           (in particular, NaCl X86-64 needs exactly 16-bytes for va_list) */
+ 
+         t = build_array_type (
+-                long_long_unsigned_type_node,
+-                build_index_type (build_int_cst (NULL_TREE, 3-1)));
++                unsigned_type_node,
++                build_index_type (build_int_cst (NULL_TREE, 4-1)));
+       }
+     else
+         t = targetm.build_builtin_va_list ();

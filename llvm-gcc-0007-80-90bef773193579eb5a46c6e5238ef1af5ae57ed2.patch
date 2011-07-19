@@ -1,0 +1,204 @@
+# HG changeset patch
+# User robertm@google.com
+# Date 1307555221 14400
+# Branch pnacl-sfi
+# Node ID 90bef773193579eb5a46c6e5238ef1af5ae57ed2
+# Parent 59be684aacedac0482d52489d0af6d272f8674b2
+This CL adds a few hacks to libgcc_eh to make it work for x86-64:
+
+* it adds a call to the new "intrinsic" pnacl_unwind_init_dwarf_reg_size_table
+
+* it asserts the settings of various global #defines
+because they influence the code path.
+This is mostly meant to document what assumptions our bitcode libgcc_eh makes.
+As long as we are building libgcc_eh natively, this also ensures that those settings hold for all
+three currently supported archs.
+
+* It disables a few asserts that fire for x86-64.
+Those asserts are justified and we lose the upper 32bits when certain 64 bit registers are restored.
+Luckily those regs are typically pointers where this does not matter. This needs to be carefully revisited in a future CL. It is not clear that native version of libgcc_eh gets this right either
+because in the x86-64 case the frontend is assuming sizeof(void*) == 8 but when we compile the bitcode to native code we actually assume sizeof(void*) == 4
+c.f. http://code.google.com/p/nativeclient/issues/detail?id=869
+
+* Improved the debugging helpers somewhat. Note: The helpers are "defined out" by default
+
+BUG= http://code.google.com/p/nativeclient/issues/detail?id=869
+BUG= http://code.google.com/p/nativeclient/issues/detail?id=1520
+
+CL= http://codereview.chromium.org/7054087/
+
+ From llvm-gcc-0007-80-90bef773193579eb5a46c6e5238ef1af5ae57ed2.patch
+
+diff -r 59be684aaced gcc/pnacl-unwind.h
+--- a/gcc/pnacl-unwind.h	Thu Jun 02 11:59:34 2011 -0400
++++ b/gcc/pnacl-unwind.h	Mon Jul 18 18:43:19 2011 -0700
+@@ -25,5 +25,6 @@
+ extern int pnacl_unwind_result0_reg();
+ extern int pnacl_unwind_result1_reg();
+ extern int pnacl_unwind_dwarf_frame_registers();
++extern int pnacl_unwind_init_dwarf_reg_size_table();
+ 
+ #endif /* PNACL_UNWIND_H */
+diff -r 59be684aaced gcc/unwind-dw2.c
+--- a/gcc/unwind-dw2.c	Thu Jun 02 11:59:34 2011 -0400
++++ b/gcc/unwind-dw2.c	Mon Jul 18 18:43:19 2011 -0700
+@@ -46,6 +46,8 @@
+ 
+ #ifndef STACK_GROWS_DOWNWARD
+ #define STACK_GROWS_DOWNWARD 0
++/* @LOCALMOD TODO: make this into an intrinsic */
++#error "pnacl requires downward growing stack"
+ #else
+ #undef STACK_GROWS_DOWNWARD
+ #define STACK_GROWS_DOWNWARD 1
+@@ -60,6 +62,8 @@
+ 
+ #ifndef DWARF_REG_TO_UNWIND_COLUMN
+ #define DWARF_REG_TO_UNWIND_COLUMN(REGNO) (REGNO)
++#else
++#error "pnacl requires dwarf identity mapping" /* @LOCALMOD */
+ #endif
+ 
+ /* @LOCALMOD-START */
+@@ -84,6 +88,13 @@
+    to its caller.  */
+ struct _Unwind_Context
+ {
++  /*
++   * TODO(robertm): "reg" and possibly other members may need to hold  
++   * 64 bit quantities on x86-64 (e.g. when by_value is true). 
++   * This needs to be revisited with tests that check that the upper
++   * half of a 64bit reg is properly restored.
++   * We probably also need to force _UnwindPtr and/or _UnwindWord to be 64bit.
++   */
+   void *reg[PNACL_MAX_DWARF_FRAME_REGISTERS+1]; /* @LOCALMOD */
+   void *cfa;
+   void *ra;
+@@ -103,10 +114,14 @@
+ 
+ /* @LOCALMOD-START */
+ #if 0
++/* NOTE: usually gcc_assert just fails silently */
++/* NOTE: this version does not abort */ 
++#define gcc_assert(a) if (!(a)) printf("ASSERT FAILED: " #a "\n");
++
+ void DUMP_CONTEXT(struct _Unwind_Context* c) {
+   int i;
+-  printf("--------  _Unwind_Context: %p, cfa: %p,  ra: %p, lsda: %p\n",
+-         c, c->cfa, c->ra, c->lsda);
++  printf("--------  _Unwind_Context: %p, cfa: %p,  ra: %p, lsda: %p, flags: %x\n",
++         c, c->cfa, c->ra, c->lsda, c->flags);
+   for (i = 0; i < DWARF_FRAME_REGISTERS+1; i++) {
+     printf("reg %2d: %p (by val %d)", i, c->reg[i], c->by_value[i]);
+     if  (!c->by_value[i] && c->reg[i] != 0) { 
+@@ -208,11 +223,12 @@
+   void *ptr;
+ 
+ #ifdef DWARF_ZERO_REG
++#error "pnacl does not support DWARF_ZERO_REG" /* @LOCALMOD */
+   if (index == DWARF_ZERO_REG)
+     return 0;
+ #endif
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < DWARF_FRAME_REGISTERS + 1);  /* @LOCALMOD */
+   size = dwarf_reg_size_table[index];
+   ptr = context->reg[index];
+   if (_Unwind_IsExtendedContext (context) && context->by_value[index])
+@@ -223,7 +239,8 @@
+     return * (_Unwind_Ptr *) ptr;
+   else
+     {
+-      gcc_assert (size == sizeof(_Unwind_Word));
++      /* @LOCALMOD this actually fires for x86-64 */
++      /* gcc_assert (size == sizeof(_Unwind_Word) && "GetGR"); */
+       return * (_Unwind_Word *) ptr;
+     }
+ }
+@@ -249,9 +266,9 @@
+ {
+   int size;
+   void *ptr;
+-
++  
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < DWARF_FRAME_REGISTERS + 1);  /* @LOCALMOD */
+   size = dwarf_reg_size_table[index];
+ 
+   if (_Unwind_IsExtendedContext (context) && context->by_value[index])
+@@ -266,7 +283,8 @@
+     * (_Unwind_Ptr *) ptr = val;
+   else
+     {
+-      gcc_assert (size == sizeof(_Unwind_Word));
++      /* @LOCALMOD this actually fires for x86-64 */
++      /* gcc_assert (size == sizeof(_Unwind_Word) && "SetGR"); */
+       * (_Unwind_Word *) ptr = val;
+     }
+ }
+@@ -337,7 +355,7 @@
+ 		    _Unwind_Word val)
+ {
+   index = DWARF_REG_TO_UNWIND_COLUMN (index);
+-  gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
++  gcc_assert (index < DWARF_FRAME_REGISTERS + 1);   /* @LOCALMOD */
+   gcc_assert (dwarf_reg_size_table[index] == sizeof (_Unwind_Ptr));
+ 
+   context->by_value[index] = 1;
+@@ -1191,6 +1209,7 @@
+   if (fde == NULL)
+     {
+ #ifdef MD_FALLBACK_FRAME_STATE_FOR
++#error "pnacl does not support MD_FALLBACK_FRAME_STATE_FOR" /* @LOCALMOD */
+       /* Couldn't find frame unwind info for this function.  Try a
+ 	 target-specific fallback mechanism.  This will necessarily
+ 	 not provide a personality routine or LSDA.  */
+@@ -1315,7 +1334,8 @@
+     tmp_sp->ptr = (_Unwind_Ptr) cfa;
+   else
+     {
+-      gcc_assert (size == sizeof(_Unwind_Word));
++      /* @LOCALMOD this actually fires for x86-64 */
++      /* gcc_assert (size == sizeof(_Unwind_Word && "SetSpColumn")); */
+       tmp_sp->word = (_Unwind_Ptr) cfa;
+     }
+   _Unwind_SetGRPtr (context, __builtin_dwarf_sp_column (), tmp_sp);
+@@ -1328,7 +1348,7 @@
+   void *cfa;
+   long i;
+ 
+-#ifdef EH_RETURN_STACKADJ_RTX
++#ifdef EH_RETURN_STACKADJ_RTX 
+   /* Special handling here: Many machines do not use a frame pointer,
+      and track the CFA only through offsets from the stack pointer from
+      one frame to the next.  In this case, the stack pointer is never
+@@ -1349,6 +1369,8 @@
+   if (!_Unwind_GetGRPtr (&orig_context, __builtin_dwarf_sp_column ()))
+     _Unwind_SetSpColumn (&orig_context, context->cfa, &tmp_sp);
+   _Unwind_SetGRPtr (context, __builtin_dwarf_sp_column (), NULL);
++#else
++#error "pnacl requires EH_RETURN_STACKADJ_RTX to be general" /* @LOCALMOD */
+ #endif
+ 
+   /* Compute this frame's CFA.  */
+@@ -1434,6 +1456,7 @@
+   _Unwind_SetSignalFrame (context, fs->signal_frame);
+ 
+ #ifdef MD_FROB_UPDATE_CONTEXT
++#error "pnacl does not support MD_FROB_UPDATE_CONTEXT" /* @LOCALMOD */
+   MD_FROB_UPDATE_CONTEXT (context, fs);
+ #endif
+ }
+@@ -1476,7 +1499,10 @@
+ static inline void
+ init_dwarf_reg_size_table (void)
+ {
+-  __builtin_init_dwarf_reg_size_table (dwarf_reg_size_table);
++  /* @LOCALMOD */
++   pnacl_unwind_init_dwarf_reg_size_table (dwarf_reg_size_table); 
++   /*  __builtin_init_dwarf_reg_size_table (dwarf_reg_size_table); */
++
+ }
+ 
+ static void
