@@ -3,15 +3,15 @@
 # Date 1305751980 25200
 # Branch pnacl-sfi
 # Node ID cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b
-# Parent 64fdc4b7aab6bc0f862f6604e394db72c3daa76f
+# Parent 382f87487f399cd88736c0496b882cb193cd54aa
 Don't define __linux__ in compiler:
 REVIEW=http://codereview.chromium.org/7045015/
 
  From llvm-gcc-0004-77-cfdaa7f260192cb851e4ccfe70dfaa41a5f3666b.patch
 
-diff -r 64fdc4b7aab6 gcc/config/linux.h
+diff -r 382f87487f39 gcc/config/linux.h
 --- a/gcc/config/linux.h	Thu Apr 07 07:08:50 2011 -0700
-+++ b/gcc/config/linux.h	Mon Jul 18 18:48:56 2011 -0700
++++ b/gcc/config/linux.h	Mon Jul 18 18:50:51 2011 -0700
 @@ -76,10 +76,7 @@
  
  #define LINUX_TARGET_OS_CPP_BUILTINS()				\

@@ -3,15 +3,15 @@
 # Date 1296781597 28800
 # Branch pnacl-sfi
 # Node ID a24f3ae473c81f0b495003a0833d3d1d8b56b3d4
-# Parent 037e5342ba867f8a0e180ef4b88e4a4f55d2a999
+# Parent d066495f11a6a94cfcec92f14e4b3e9aa0549d62
 # Parent  7bb94b24cbbe4933a6ed2e55f902d278bc92cf81
 Merged up to r124151
 
  From llvm-gcc-0000-73-a24f3ae473c81f0b495003a0833d3d1d8b56b3d4.patch
 
-diff -r 037e5342ba86 configure
---- a/configure	Thu Jan 27 21:38:44 2011 +0000
-+++ b/configure	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 configure
+--- a/configure	Wed Mar 02 20:30:39 2011 +0000
++++ b/configure	Mon Jul 18 18:50:43 2011 -0700
 @@ -2681,6 +2681,14 @@
  # $build_configdirs and $target_configdirs.
  # If we have the source for $noconfigdirs entries, add them to $notsupp.
@@ -27,9 +27,9 @@ diff -r 037e5342ba86 configure
  notsupp=""
  for dir in . $skipdirs $noconfigdirs ; do
    dirname=`echo $dir | sed -e s/target-//g -e s/build-//g`
-diff -r 037e5342ba86 gcc/Makefile.in
---- a/gcc/Makefile.in	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/Makefile.in	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/Makefile.in
+--- a/gcc/Makefile.in	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/Makefile.in	Mon Jul 18 18:50:43 2011 -0700
 @@ -1684,7 +1684,7 @@
  #
  # Build libgcc.a.
@@ -39,9 +39,9 @@ diff -r 037e5342ba86 gcc/Makefile.in
  LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
  
  # LLVM LOCAL begin libcc_kext
-diff -r 037e5342ba86 gcc/builtins.c
---- a/gcc/builtins.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/builtins.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/builtins.c
+--- a/gcc/builtins.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/builtins.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -4359,6 +4359,30 @@
    return build_va_arg_indirect_ref (addr);
  }
@@ -88,9 +88,9 @@ diff -r 037e5342ba86 gcc/builtins.c
        return GS_OK;
      }
  }
-diff -r 037e5342ba86 gcc/builtins.def
---- a/gcc/builtins.def	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/builtins.def	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/builtins.def
+--- a/gcc/builtins.def	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/builtins.def	Mon Jul 18 18:50:43 2011 -0700
 @@ -702,6 +702,14 @@
  DEF_GCC_BUILTIN        (BUILT_IN_VA_COPY, "va_copy", BT_FN_VOID_VALIST_REF_VALIST_ARG, ATTR_NULL)
  DEF_GCC_BUILTIN        (BUILT_IN_VA_END, "va_end", BT_FN_VOID_VALIST_REF, ATTR_NULL)
@@ -106,9 +106,9 @@ diff -r 037e5342ba86 gcc/builtins.def
  DEF_EXT_LIB_BUILTIN    (BUILT_IN__EXIT, "_exit", BT_FN_VOID_INT, ATTR_NORETURN_NOTHROW_LIST)
  DEF_C99_BUILTIN        (BUILT_IN__EXIT2, "_Exit", BT_FN_VOID_INT, ATTR_NORETURN_NOTHROW_LIST)
  
-diff -r 037e5342ba86 gcc/common.opt
---- a/gcc/common.opt	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/common.opt	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/common.opt
+--- a/gcc/common.opt	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/common.opt	Mon Jul 18 18:50:43 2011 -0700
 @@ -117,6 +117,16 @@
  Common Var(warn_padded)
  Warn when padding is required to align structure members
@@ -137,9 +137,9 @@ diff -r 037e5342ba86 gcc/common.opt
  fvar-tracking
  Common Report Var(flag_var_tracking) VarExists
  Perform variable tracking
-diff -r 037e5342ba86 gcc/config.gcc
---- a/gcc/config.gcc	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config.gcc	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config.gcc
+--- a/gcc/config.gcc	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config.gcc	Mon Jul 18 18:50:43 2011 -0700
 @@ -522,7 +522,7 @@
    ;;
  *-*-linux* | frv-*-*linux* | *-*-kfreebsd*-gnu | *-*-knetbsd*-gnu)
@@ -149,9 +149,9 @@ diff -r 037e5342ba86 gcc/config.gcc
    extra_options="${extra_options} linux.opt"
    gas=yes
    gnu_ld=yes
-diff -r 037e5342ba86 gcc/config/arm/arm-tune.md
---- a/gcc/config/arm/arm-tune.md	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/arm-tune.md	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/arm-tune.md
+--- a/gcc/config/arm/arm-tune.md	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/arm-tune.md	Mon Jul 18 18:50:43 2011 -0700
 @@ -1,5 +1,5 @@
  ;; -*- buffer-read-only: t -*-
  ;; Generated automatically by gentune.sh from arm-cores.def
@@ -159,9 +159,9 @@ diff -r 037e5342ba86 gcc/config/arm/arm-tune.md
 -	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2fs,cortexa9,arm1156t2s,cortexa8,cortexr4,cortexm3"
 +	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,cortexa8,cortexa9,cortexr4,cortexm3,cortexm4,cortexm0"
  	(const (symbol_ref "arm_tune")))
-diff -r 037e5342ba86 gcc/config/arm/arm.c
---- a/gcc/config/arm/arm.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/arm.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/arm.c
+--- a/gcc/config/arm/arm.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/arm.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -456,8 +456,25 @@
  #undef TARGET_ASM_TTYPE
  #define TARGET_ASM_TTYPE arm_output_ttype
@@ -205,9 +205,9 @@ diff -r 037e5342ba86 gcc/config/arm/arm.c
    gcc_unreachable ();
  }
  
-diff -r 037e5342ba86 gcc/config/arm/arm.h
---- a/gcc/config/arm/arm.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/arm.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/arm.h
+--- a/gcc/config/arm/arm.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/arm.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -402,6 +402,9 @@
  
  extern enum float_abi_type arm_float_abi;
@@ -237,9 +237,9 @@ diff -r 037e5342ba86 gcc/config/arm/arm.h
  /* Standard register usage.  */
  
  /* Register allocation in ARM Procedure Call Standard (as used on RISCiX):
-diff -r 037e5342ba86 gcc/config/arm/bpabi.S
---- a/gcc/config/arm/bpabi.S	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/bpabi.S	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/bpabi.S
+--- a/gcc/config/arm/bpabi.S	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/bpabi.S	Mon Jul 18 18:50:43 2011 -0700
 @@ -81,7 +81,7 @@
  #ifdef L_aeabi_ldivmod
  
@@ -282,9 +282,9 @@ diff -r 037e5342ba86 gcc/config/arm/bpabi.S
  	do_pop {r2, r3}
  /* APPLE LOCAL end v7 support. Merge from mainline */
  	RET
-diff -r 037e5342ba86 gcc/config/arm/bpabi.h
---- a/gcc/config/arm/bpabi.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/bpabi.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/bpabi.h
+--- a/gcc/config/arm/bpabi.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/bpabi.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -66,12 +66,20 @@
  #define RENAME_LIBRARY_SET ".set"
  #endif
@@ -307,9 +307,9 @@ diff -r 037e5342ba86 gcc/config/arm/bpabi.h
  /* Give some libgcc functions an additional __aeabi name.  */
  #ifdef L_muldi3
  #define DECLARE_LIBRARY_RENAMES RENAME_LIBRARY (muldi3, lmul)
-diff -r 037e5342ba86 gcc/config/arm/lib1funcs.asm
---- a/gcc/config/arm/lib1funcs.asm	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/lib1funcs.asm	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/lib1funcs.asm
+--- a/gcc/config/arm/lib1funcs.asm	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/lib1funcs.asm	Mon Jul 18 18:50:43 2011 -0700
 @@ -32,6 +32,9 @@
  
  /* We need to know what prefix to add to function names.  */
@@ -535,9 +535,9 @@ diff -r 037e5342ba86 gcc/config/arm/lib1funcs.asm
  
  #ifndef __symbian__
  #include "ieee754-df.S"
-diff -r 037e5342ba86 gcc/config/arm/libunwind.S
---- a/gcc/config/arm/libunwind.S	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/libunwind.S	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/libunwind.S
+--- a/gcc/config/arm/libunwind.S	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/libunwind.S	Mon Jul 18 18:50:43 2011 -0700
 @@ -26,6 +26,8 @@
     the Free Software Foundation, 51 Franklin Street, Fifth Floor,
     Boston, MA 02110-1301, USA.  */
@@ -547,9 +547,9 @@ diff -r 037e5342ba86 gcc/config/arm/libunwind.S
  #ifndef __symbian__
  
  #include "lib1funcs.asm"
-diff -r 037e5342ba86 gcc/config/arm/linux-eabi.h
---- a/gcc/config/arm/linux-eabi.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/linux-eabi.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/linux-eabi.h
+--- a/gcc/config/arm/linux-eabi.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/linux-eabi.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -33,8 +33,10 @@
  
  /* We default to a soft-float ABI so that binaries can run on all
@@ -563,9 +563,9 @@ diff -r 037e5342ba86 gcc/config/arm/linux-eabi.h
  
  /* We default to the "aapcs-linux" ABI so that enums are int-sized by
     default.  */
-diff -r 037e5342ba86 gcc/config/arm/llvm-arm-target.h
---- a/gcc/config/arm/llvm-arm-target.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/llvm-arm-target.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/llvm-arm-target.h
+--- a/gcc/config/arm/llvm-arm-target.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/llvm-arm-target.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -102,6 +102,27 @@
  #define LLVM_SHOULD_RETURN_VECTOR_AS_SHADOW(X, isBuiltin) \
    (TREE_INT_CST_LOW(TYPE_SIZE(X)) > 128)
@@ -594,9 +594,9 @@ diff -r 037e5342ba86 gcc/config/arm/llvm-arm-target.h
  #endif /* LLVM_ABI_H */
  #endif /* ENABLE_LLVM */
  /* LLVM LOCAL end (ENTIRE FILE!)  */
-diff -r 037e5342ba86 gcc/config/arm/naclmacros.asm
+diff -r d066495f11a6 gcc/config/arm/naclmacros.asm
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/gcc/config/arm/naclmacros.asm	Mon Jul 18 18:48:47 2011 -0700
++++ b/gcc/config/arm/naclmacros.asm	Mon Jul 18 18:50:43 2011 -0700
 @@ -0,0 +1,392 @@
 +@LOCALMOD_START - NativeClient SFI macros
 +  .macro sfi_long_based_on_pos p0 p1 p2 p3 val
@@ -990,9 +990,9 @@ diff -r 037e5342ba86 gcc/config/arm/naclmacros.asm
 +
 +#define NACL_HALT         bkpt 0x6666
 +
-diff -r 037e5342ba86 gcc/config/arm/pr-support.c
---- a/gcc/config/arm/pr-support.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/pr-support.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/pr-support.c
+--- a/gcc/config/arm/pr-support.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/pr-support.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -27,10 +27,7 @@
     Boston, MA 02110-1301, USA.  */
  #include "unwind.h"
@@ -1005,9 +1005,9 @@ diff -r 037e5342ba86 gcc/config/arm/pr-support.c
  typedef struct _ZSt9type_info type_info; /* This names C++ type_info type */
  
  /* Misc constants.  */
-diff -r 037e5342ba86 gcc/config/arm/t-bpabi
---- a/gcc/config/arm/t-bpabi	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/t-bpabi	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/t-bpabi
+--- a/gcc/config/arm/t-bpabi	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/t-bpabi	Mon Jul 18 18:50:43 2011 -0700
 @@ -4,12 +4,15 @@
  # Add the BPABI C functions.
  LIB2FUNCS_EXTRA = $(srcdir)/config/arm/bpabi.c \
@@ -1029,9 +1029,9 @@ diff -r 037e5342ba86 gcc/config/arm/t-bpabi
  
  # Add the BPABI names.
  SHLIB_MAPFILES += $(srcdir)/config/arm/libgcc-bpabi.ver
-diff -r 037e5342ba86 gcc/config/arm/t-symbian
---- a/gcc/config/arm/t-symbian	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/t-symbian	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/t-symbian
+--- a/gcc/config/arm/t-symbian	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/t-symbian	Mon Jul 18 18:50:43 2011 -0700
 @@ -13,9 +13,12 @@
  	_fixsfsi _fixunssfsi
  
@@ -1048,9 +1048,9 @@ diff -r 037e5342ba86 gcc/config/arm/t-symbian
  
  # Create a multilib for processors with VFP floating-point, and a
  # multilib for those without -- using the soft-float ABI in both
-diff -r 037e5342ba86 gcc/config/arm/unwind-arm.c
---- a/gcc/config/arm/unwind-arm.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/arm/unwind-arm.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/arm/unwind-arm.c
+--- a/gcc/config/arm/unwind-arm.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/arm/unwind-arm.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -27,9 +27,7 @@
     Boston, MA 02110-1301, USA.  */
  #include "unwind.h"
@@ -1062,9 +1062,9 @@ diff -r 037e5342ba86 gcc/config/arm/unwind-arm.c
  
  /* Definitions for C++ runtime support routines.  We make these weak
     declarations to avoid pulling in libsupc++ unnecessarily.  */
-diff -r 037e5342ba86 gcc/config/i386/i386.h
---- a/gcc/config/i386/i386.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/i386/i386.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/i386/i386.h
+--- a/gcc/config/i386/i386.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/i386/i386.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -621,7 +621,8 @@
  
  /* target machine storage layout */
@@ -1075,9 +1075,9 @@ diff -r 037e5342ba86 gcc/config/i386/i386.h
  
  /* Set the value of FLT_EVAL_METHOD in float.h.  When using only the
     FPU, assume that the fpcw is set to extended precision; when using
-diff -r 037e5342ba86 gcc/config/i386/llvm-i386.cpp
---- a/gcc/config/i386/llvm-i386.cpp	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/i386/llvm-i386.cpp	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/i386/llvm-i386.cpp
+--- a/gcc/config/i386/llvm-i386.cpp	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/i386/llvm-i386.cpp	Mon Jul 18 18:50:43 2011 -0700
 @@ -1746,7 +1746,8 @@
      case X86_64_X87_CLASS:
      case X86_64_X87UP_CLASS:
@@ -1100,9 +1100,9 @@ diff -r 037e5342ba86 gcc/config/i386/llvm-i386.cpp
      return StructType::get(Context, ElementTypes, STy->isPacked());
    } 
  
-diff -r 037e5342ba86 gcc/config/i386/t-crtfm
---- a/gcc/config/i386/t-crtfm	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/i386/t-crtfm	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/i386/t-crtfm
+--- a/gcc/config/i386/t-crtfm	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/i386/t-crtfm	Mon Jul 18 18:50:43 2011 -0700
 @@ -1,4 +1,6 @@
 -EXTRA_PARTS += crtfastmath.o
 +# @LOCALMOD we have our own startup code so we do not use this
@@ -1111,9 +1111,9 @@ diff -r 037e5342ba86 gcc/config/i386/t-crtfm
  
  $(T)crtfastmath.o: $(srcdir)/config/i386/crtfastmath.c $(GCC_PASSES)
  	$(GCC_FOR_TARGET) $(LIBGCC2_CFLAGS) -msse -c \
-diff -r 037e5342ba86 gcc/config/i386/t-linux64
---- a/gcc/config/i386/t-linux64	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/i386/t-linux64	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/i386/t-linux64
+--- a/gcc/config/i386/t-linux64	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/i386/t-linux64	Mon Jul 18 18:50:43 2011 -0700
 @@ -22,7 +22,7 @@
  LIBGCC = stmp-multilib
  INSTALL_LIBGCC = install-multilib
@@ -1123,9 +1123,9 @@ diff -r 037e5342ba86 gcc/config/i386/t-linux64
  		     crtbeginT.o crtfastmath.o
  
  # The pushl in CTOR initialization interferes with frame pointer elimination.
-diff -r 037e5342ba86 gcc/config/i386/unix.h
---- a/gcc/config/i386/unix.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/i386/unix.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/i386/unix.h
+--- a/gcc/config/i386/unix.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/i386/unix.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -65,6 +65,12 @@
  #define TARGET_SUBTARGET_DEFAULT \
  	(MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS)
@@ -1139,9 +1139,9 @@ diff -r 037e5342ba86 gcc/config/i386/unix.h
  /* By default, 64-bit mode uses 128-bit long double.  */
  #undef TARGET_SUBTARGET64_DEFAULT
  #define TARGET_SUBTARGET64_DEFAULT \
-diff -r 037e5342ba86 gcc/config/t-linux
---- a/gcc/config/t-linux	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/config/t-linux	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/config/t-linux
+--- a/gcc/config/t-linux	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/config/t-linux	Mon Jul 18 18:50:43 2011 -0700
 @@ -1,13 +1,25 @@
  # Compile crtbeginS.o and crtendS.o with pic.
  CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
@@ -1172,9 +1172,9 @@ diff -r 037e5342ba86 gcc/config/t-linux
 +# @LOCALMOD-END
 +
 +
-diff -r 037e5342ba86 gcc/crtstuff.c
---- a/gcc/crtstuff.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/crtstuff.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/crtstuff.c
+--- a/gcc/crtstuff.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/crtstuff.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -51,6 +51,15 @@
  
     This file must be compiled with gcc.  */
@@ -1196,9 +1196,9 @@ diff -r 037e5342ba86 gcc/crtstuff.c
  #error "One of CRT_BEGIN or CRT_END must be defined."
  #endif
 +#endif /* @LOCALMOD-END */
-diff -r 037e5342ba86 gcc/libgcc-memcpy.c
+diff -r d066495f11a6 gcc/libgcc-memcpy.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/gcc/libgcc-memcpy.c	Mon Jul 18 18:48:47 2011 -0700
++++ b/gcc/libgcc-memcpy.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -0,0 +1,40 @@
 +/* memcpy copy for libgcc.  */
 +/* Copyright (C) 2010 Free Software Foundation, Inc.
@@ -1240,9 +1240,9 @@ diff -r 037e5342ba86 gcc/libgcc-memcpy.c
 +    *destp++ = *srcp++;
 +  return dest;
 +}
-diff -r 037e5342ba86 gcc/libgcc2.c
---- a/gcc/libgcc2.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/libgcc2.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/libgcc2.c
+--- a/gcc/libgcc2.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/libgcc2.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -42,6 +42,20 @@
  #endif
  /* APPLE LOCAL end libcc_kext */
@@ -1289,9 +1289,9 @@ diff -r 037e5342ba86 gcc/libgcc2.c
  #endif /* L_enable_execute_stack */
  
  #ifdef L_trampoline
-diff -r 037e5342ba86 gcc/llvm-backend.cpp
---- a/gcc/llvm-backend.cpp	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/llvm-backend.cpp	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/llvm-backend.cpp
+--- a/gcc/llvm-backend.cpp	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/llvm-backend.cpp	Mon Jul 18 18:50:43 2011 -0700
 @@ -1894,6 +1894,15 @@
  /// llvm_emit_file_scope_asm - Emit the specified string as a file-scope inline
  /// asm block.
@@ -1328,9 +1328,9 @@ diff -r 037e5342ba86 gcc/llvm-backend.cpp
  /// extractRegisterName - Get a register name given its decl. In 4.2 unlike 4.0
  /// these names have been run through set_user_assembler_name which means they
  /// may have a leading \1 at this point; compensate.
-diff -r 037e5342ba86 gcc/llvm-convert.cpp
---- a/gcc/llvm-convert.cpp	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/llvm-convert.cpp	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/llvm-convert.cpp	Mon Jul 18 18:50:43 2011 -0700
 @@ -4348,6 +4348,10 @@
      return 0;   // Just don't copy something into DestLoc.
    }
@@ -1477,9 +1477,9 @@ diff -r 037e5342ba86 gcc/llvm-convert.cpp
  bool TreeToLLVM::EmitBuiltinVACopy(tree exp) {
    tree Arg1T = TREE_VALUE(TREE_OPERAND(exp, 1));
    tree Arg2T = TREE_VALUE(TREE_CHAIN(TREE_OPERAND(exp, 1)));
-diff -r 037e5342ba86 gcc/llvm-internal.h
---- a/gcc/llvm-internal.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/llvm-internal.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/llvm-internal.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -570,6 +570,7 @@
    bool EmitBuiltinExtendPointer(tree_node *exp, Value *&Result);
    bool EmitBuiltinVAStart(tree_node *exp);
@@ -1488,9 +1488,9 @@ diff -r 037e5342ba86 gcc/llvm-internal.h
    bool EmitBuiltinVACopy(tree_node *exp);
    bool EmitBuiltinMemCopy(tree_node *exp, Value *&Result,
                            bool isMemMove, bool SizeCheck);
-diff -r 037e5342ba86 gcc/llvm.h
---- a/gcc/llvm.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/llvm.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/llvm.h
+--- a/gcc/llvm.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/llvm.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -116,6 +116,14 @@
   * to the more concrete type new_type.
   */
@@ -1506,9 +1506,9 @@ diff -r 037e5342ba86 gcc/llvm.h
  #endif /* ENABLE_LLVM */
  
  #endif
-diff -r 037e5342ba86 gcc/longlong.h
---- a/gcc/longlong.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/longlong.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/longlong.h
+--- a/gcc/longlong.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/longlong.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -97,6 +97,15 @@
     (E.g. WE32100, IBM360.)  */
  
@@ -1525,9 +1525,9 @@ diff -r 037e5342ba86 gcc/longlong.h
  #if defined (__GNUC__) && !defined (NO_ASM) && (!defined (ENABLE_LLVM) || !defined (__llvm__))
  /* LLVM LOCAL end */
  
-diff -r 037e5342ba86 gcc/mklibgcc.in
---- a/gcc/mklibgcc.in	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/mklibgcc.in	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/mklibgcc.in
+--- a/gcc/mklibgcc.in	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/mklibgcc.in	Mon Jul 18 18:50:43 2011 -0700
 @@ -218,7 +218,9 @@
    shlib_slibdir_qual=
    libgcc_a=$dir/libgcc.a
@@ -1539,7 +1539,7 @@ diff -r 037e5342ba86 gcc/mklibgcc.in
    libgcc_s_so=
    libunwind_a=
    libunwind_so=
-@@ -897,11 +899,16 @@
+@@ -903,11 +905,16 @@
    echo '	chmod 644'  ${ldir}/libgcov.a
    echo '	$(RANLIB_FOR_TARGET)' ${ldir}/libgcov.a
  
@@ -1557,9 +1557,9 @@ diff -r 037e5342ba86 gcc/mklibgcc.in
      shlib_slibdir_qual=
      os_multilib_dir=`$GCC_FOR_TARGET $flags --print-multi-os-directory`
      if [ "$os_multilib_dir" != . ]; then
-diff -r 037e5342ba86 gcc/tree.c
---- a/gcc/tree.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/tree.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/tree.c
+--- a/gcc/tree.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/tree.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -6743,7 +6743,21 @@
    layout_type (complex_long_double_type_node);
  
@@ -1583,9 +1583,9 @@ diff -r 037e5342ba86 gcc/tree.c
  
      /* Many back-ends define record types without setting TYPE_NAME.
         If we copied the record type here, we'd keep the original
-diff -r 037e5342ba86 gcc/tree.h
---- a/gcc/tree.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/tree.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/tree.h
+--- a/gcc/tree.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/tree.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -4591,6 +4591,7 @@
  extern tree strip_float_extensions (tree);
  extern tree c_strlen (tree, int);
@@ -1594,9 +1594,9 @@ diff -r 037e5342ba86 gcc/tree.h
  extern tree build_va_arg_indirect_ref (tree);
  tree build_string_literal (int, const char *);
  
-diff -r 037e5342ba86 gcc/unwind-c.c
---- a/gcc/unwind-c.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/unwind-c.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/unwind-c.c
+--- a/gcc/unwind-c.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/unwind-c.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -32,6 +32,20 @@
  #include "tconfig.h"
  #include "tsystem.h"
@@ -1627,9 +1627,9 @@ diff -r 037e5342ba86 gcc/unwind-c.c
  /* ARM EABI personality routines must also unwind the stack.  */
  #define CONTINUE_UNWINDING \
    do								\
-diff -r 037e5342ba86 gcc/unwind-dw2-fde.c
---- a/gcc/unwind-dw2-fde.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/unwind-dw2-fde.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/unwind-dw2-fde.c
+--- a/gcc/unwind-dw2-fde.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/unwind-dw2-fde.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -258,6 +258,15 @@
      }
  }
@@ -1670,9 +1670,9 @@ diff -r 037e5342ba86 gcc/unwind-dw2-fde.c
        fde_merge (ob, fde_compare, accu->linear, accu->erratic);
        free (accu->erratic);
      }
-diff -r 037e5342ba86 gcc/unwind-dw2.c
---- a/gcc/unwind-dw2.c	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/unwind-dw2.c	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/unwind-dw2.c
+--- a/gcc/unwind-dw2.c	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/unwind-dw2.c	Mon Jul 18 18:50:43 2011 -0700
 @@ -60,6 +60,23 @@
  #define DWARF_REG_TO_UNWIND_COLUMN(REGNO) (REGNO)
  #endif
@@ -1927,9 +1927,9 @@ diff -r 037e5342ba86 gcc/unwind-dw2.c
  #endif /* !USING_SJLJ_EXCEPTIONS */
 +
 +/* @LOCALMOD-END */
-diff -r 037e5342ba86 gcc/unwind-generic.h
---- a/gcc/unwind-generic.h	Thu Jan 27 21:38:44 2011 +0000
-+++ b/gcc/unwind-generic.h	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 gcc/unwind-generic.h
+--- a/gcc/unwind-generic.h	Wed Mar 02 20:30:39 2011 +0000
++++ b/gcc/unwind-generic.h	Mon Jul 18 18:50:43 2011 -0700
 @@ -92,6 +92,17 @@
    _Unwind_Word private_1;
    _Unwind_Word private_2;
@@ -1961,9 +1961,9 @@ diff -r 037e5342ba86 gcc/unwind-generic.h
  /* @@@ Retrieve the CFA of the given context.  */
  extern _Unwind_Word _Unwind_GetCFA (struct _Unwind_Context *);
  
-diff -r 037e5342ba86 libstdc++-v3/libsupc++/eh_arm.cc
---- a/libstdc++-v3/libsupc++/eh_arm.cc	Thu Jan 27 21:38:44 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_arm.cc	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 libstdc++-v3/libsupc++/eh_arm.cc
+--- a/libstdc++-v3/libsupc++/eh_arm.cc	Wed Mar 02 20:30:39 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_arm.cc	Mon Jul 18 18:50:43 2011 -0700
 @@ -30,6 +30,7 @@
  #include <cxxabi.h>
  #include "unwind-cxx.h"
@@ -1978,9 +1978,9 @@ diff -r 037e5342ba86 libstdc++-v3/libsupc++/eh_arm.cc
  #endif
 -
  #endif
-diff -r 037e5342ba86 libstdc++-v3/libsupc++/eh_personality.cc
---- a/libstdc++-v3/libsupc++/eh_personality.cc	Thu Jan 27 21:38:44 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_personality.cc	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 libstdc++-v3/libsupc++/eh_personality.cc
+--- a/libstdc++-v3/libsupc++/eh_personality.cc	Wed Mar 02 20:30:39 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_personality.cc	Mon Jul 18 18:50:43 2011 -0700
 @@ -405,6 +405,7 @@
    // virtual IP register point at the UCB.
    ip = (_Unwind_Ptr) ue_header;
@@ -2007,9 +2007,9 @@ diff -r 037e5342ba86 libstdc++-v3/libsupc++/eh_personality.cc
  #ifdef __ARM_EABI_UNWINDER__
    if (found_type == found_cleanup)
      __cxa_begin_cleanup(ue_header);
-diff -r 037e5342ba86 libstdc++-v3/libsupc++/eh_throw.cc
---- a/libstdc++-v3/libsupc++/eh_throw.cc	Thu Jan 27 21:38:44 2011 +0000
-+++ b/libstdc++-v3/libsupc++/eh_throw.cc	Mon Jul 18 18:48:47 2011 -0700
+diff -r d066495f11a6 libstdc++-v3/libsupc++/eh_throw.cc
+--- a/libstdc++-v3/libsupc++/eh_throw.cc	Wed Mar 02 20:30:39 2011 +0000
++++ b/libstdc++-v3/libsupc++/eh_throw.cc	Mon Jul 18 18:50:43 2011 -0700
 @@ -52,6 +52,7 @@
    __cxa_free_exception (header + 1);
  }
