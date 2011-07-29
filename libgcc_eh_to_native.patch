@@ -1,0 +1,134 @@
+Move libgcc_eh back to native code
+
+diff -r 5868d5c7fc1e -r 44d1ff197f9f gcc/pnacl-unwind.h
+--- a/gcc/pnacl-unwind.h	Thu Jun 30 16:53:18 2011 -0400
++++ b/gcc/pnacl-unwind.h	Fri Jul 29 15:31:59 2011 -0700
+@@ -20,11 +20,10 @@
+    other places use PNACL_MAX_DWARF_FRAME_REGISTERS */
+ #define  DWARF_FRAME_REGISTERS pnacl_unwind_dwarf_frame_registers()
+ 
+-/* define in native_client/src/untrusted/stubs/unwind_support.c */
+-extern int pnacl_unwind_dwarf_sp_column();
+-extern int pnacl_unwind_result0_reg();
+-extern int pnacl_unwind_result1_reg();
+-extern int pnacl_unwind_dwarf_frame_registers();
+-extern int pnacl_unwind_init_dwarf_reg_size_table();
++extern int pnacl_unwind_dwarf_sp_column(void);
++extern int pnacl_unwind_result0_reg(void);
++extern int pnacl_unwind_result1_reg(void);
++extern int pnacl_unwind_dwarf_frame_registers(void);
++extern void pnacl_unwind_init_dwarf_reg_size_table(unsigned char* table);
+ 
+ #endif /* PNACL_UNWIND_H */
+diff -r 5868d5c7fc1e -r 44d1ff197f9f gcc/unwind-dw2.c
+--- a/gcc/unwind-dw2.c	Thu Jun 30 16:53:18 2011 -0400
++++ b/gcc/unwind-dw2.c	Fri Jul 29 15:31:59 2011 -0700
+@@ -326,6 +326,99 @@
+ }
+ /* @LOCALMOD-END */
+ 
++/* @LOCALMOD-BEGIN */
++
++/* This corresponds to: __builtin_dwarf_sp_column */
++/* TODO(robertm): this needs to be better documented */
++int pnacl_unwind_dwarf_sp_column(void) {
++#if defined(__x86_64__)
++  return 7;
++#elif defined(__i386__)
++  return 4;
++#elif defined(__arm__)
++  return 13;
++#else
++  #error "unknown platform"
++  return -1;
++#endif
++}
++
++/* This corresponds to:  __builtin_eh_return_data_regno(0)  */
++/* TODO(robertm): this needs to be better documented */
++int pnacl_unwind_result0_reg(void) {
++#if defined(__x86_64__)
++  return 0;
++#elif defined(__i386__)
++  return 0;
++#elif defined(__arm__)
++  return 4;
++#else
++  #error "unknown platform"
++  return -1;
++#endif
++}
++
++/* This corresponds to:   __builtin_eh_return_data_regno(1) */
++/* TODO(robertm): this needs to be better documented */
++int pnacl_unwind_result1_reg(void) {
++#if defined(__x86_64__)
++  return 1;
++#elif defined(__i386__)
++  return 2;
++#elif defined(__arm__)
++  return 5;
++#else
++  #error "unknown platform"
++  return -1;
++#endif
++}
++
++/* This corresponds to: DWARF_FRAME_REGISTERS */
++/* TODO(robertm): this needs to be better documented */
++int pnacl_unwind_dwarf_frame_registers(void) {
++#if defined(__x86_64__)
++  return 17;
++#elif defined(__i386__)
++  return 17;
++#elif defined(__arm__)
++  return 16;
++#else
++  #error "unknown platform"
++  return -1;
++#endif
++}
++
++/* This corresponds to: __builtin_init_dwarf_reg_size_table() */
++/* TODO(robertm): this needs to be better documented */
++void pnacl_unwind_init_dwarf_reg_size_table(unsigned char* table) {
++  int i;
++  int n = pnacl_unwind_dwarf_frame_registers();
++#if defined(__x86_64__)
++  /* All regs are 64bit = 8 bytes */
++  for (i = 0; i < n; ++i ){
++    table[i] = 8;
++  }
++#elif defined(__i386__)
++  /* TODO(robetrm): find better documentation for these values */
++  for (i = 0; i <= 9; ++i ){
++    table[i] = 4;
++  }
++  table[10] = 0;   /* not a typo! register not used? */
++  for (i = 11; i < n; ++i ){
++    table[i] = 12;  /* fp registers ? */
++  }
++#elif defined(__arm__)
++    /* All regs are 32bit = 4 bytes */
++    for (i = 0; i < n; ++i ){
++    table[i] = 4;
++  }
++#else
++  #error "unknown platform"
++#endif
++}
++
++/* @LOCALMOD-END */
++
+ /* Get the pointer to a register INDEX as saved in CONTEXT.  */
+ 
+ static inline void *
+@@ -1500,7 +1593,7 @@
+ init_dwarf_reg_size_table (void)
+ {
+   /* @LOCALMOD */
+-   pnacl_unwind_init_dwarf_reg_size_table (dwarf_reg_size_table); 
++   pnacl_unwind_init_dwarf_reg_size_table (dwarf_reg_size_table);
+    /*  __builtin_init_dwarf_reg_size_table (dwarf_reg_size_table); */
+ 
+ }
