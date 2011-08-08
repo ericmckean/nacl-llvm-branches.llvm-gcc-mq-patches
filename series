@@ -12,3 +12,4 @@ llvm-gcc-0010-84-8713c8955201ed075f41833a16b4215a968550c5.patch
 llvm-gcc-0011-85-4143147bce3bcc5f13e84d34a976b37b516dad0a.patch
 libgcc_eh_to_native.patch
 remove-intrinsics.patch
+remove-intrinsics2.patch
