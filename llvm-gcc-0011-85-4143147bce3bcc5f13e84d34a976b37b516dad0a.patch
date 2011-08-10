@@ -3,7 +3,7 @@
 # Date 1309467198 14400
 # Branch pnacl-sfi
 # Node ID 4143147bce3bcc5f13e84d34a976b37b516dad0a
-# Parent cb8584a8a219cf7499660f130bfb96fa4e85c08e
+# Parent f63e8d4d3979f999ad5a68a4b4fb3e5e37569577
 This LOCALMOD is not needed anymore since we switched to a single frontend.
 However we may need to investigate the use
 _Unwind_Word private_X to see whether _Unwind_Word
@@ -16,9 +16,9 @@ CL= http://codereview.chromium.org/7225003/
 
  From llvm-gcc-0011-85-4143147bce3bcc5f13e84d34a976b37b516dad0a.patch
 
-diff -r cb8584a8a219 gcc/unwind-generic.h
+diff -r f63e8d4d3979 gcc/unwind-generic.h
 --- a/gcc/unwind-generic.h	Mon Jun 27 09:43:18 2011 -0400
-+++ b/gcc/unwind-generic.h	Mon Jul 18 18:51:05 2011 -0700
++++ b/gcc/unwind-generic.h	Wed Aug 10 10:52:18 2011 -0700
 @@ -92,17 +92,6 @@
    _Unwind_Word private_1;
    _Unwind_Word private_2;

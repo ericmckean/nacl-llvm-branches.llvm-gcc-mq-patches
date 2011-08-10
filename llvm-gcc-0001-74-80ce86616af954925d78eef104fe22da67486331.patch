@@ -3,15 +3,15 @@
 # Date 1299527355 28800
 # Branch pnacl-sfi
 # Node ID 80ce86616af954925d78eef104fe22da67486331
-# Parent ea1edb9020e4cdbc22c518bc31e3df62163c799f
+# Parent 4e67f5c9265a367b665e6eac2556223f2f1f1f0e
 llvm-gcc changes to add intrinsics for elf starting, setjmp, and longjmp.
 http://codereview.chromium.org/6591043/
 
  From llvm-gcc-0001-74-80ce86616af954925d78eef104fe22da67486331.patch
 
-diff -r ea1edb9020e4 gcc/builtins.def
+diff -r 4e67f5c9265a gcc/builtins.def
 --- a/gcc/builtins.def	Thu Feb 03 17:06:37 2011 -0800
-+++ b/gcc/builtins.def	Mon Jul 18 18:50:45 2011 -0700
++++ b/gcc/builtins.def	Wed Aug 10 10:51:59 2011 -0700
 @@ -767,3 +767,13 @@
  
  /* OpenMP builtins.  */
@@ -26,9 +26,9 @@ diff -r ea1edb9020e4 gcc/builtins.def
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
 +DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
 +/* @LOCALMOD-END */
-diff -r ea1edb9020e4 gcc/llvm-convert.cpp
+diff -r 4e67f5c9265a gcc/llvm-convert.cpp
 --- a/gcc/llvm-convert.cpp	Thu Feb 03 17:06:37 2011 -0800
-+++ b/gcc/llvm-convert.cpp	Mon Jul 18 18:50:45 2011 -0700
++++ b/gcc/llvm-convert.cpp	Wed Aug 10 10:51:59 2011 -0700
 @@ -6312,6 +6312,20 @@
        return true;
      }
@@ -50,8 +50,8 @@ diff -r ea1edb9020e4 gcc/llvm-convert.cpp
    }
    return false;
  }
-@@ -8191,6 +8205,77 @@
-   return ConstantStruct::get(Context, ResultElts, false);
+@@ -8205,6 +8219,77 @@
+   return ConstantStruct::getAnon(Context, ResultElts);
  }
  
 +// @LOCALMOD-BEGIN
@@ -128,16 +128,16 @@ diff -r ea1edb9020e4 gcc/llvm-convert.cpp
  
  namespace {
  /// ConstantLayoutInfo - A helper class used by ConvertRecordCONSTRUCTOR to
-@@ -8956,5 +9041,4 @@
+@@ -9002,5 +9087,4 @@
           "It's a bitfield reference or we didn't get to the field!");
    return FieldPtr;
  }
 -
  /* LLVM LOCAL end (ENTIRE FILE!)  */
-diff -r ea1edb9020e4 gcc/llvm-internal.h
+diff -r 4e67f5c9265a gcc/llvm-internal.h
 --- a/gcc/llvm-internal.h	Thu Feb 03 17:06:37 2011 -0800
-+++ b/gcc/llvm-internal.h	Mon Jul 18 18:50:45 2011 -0700
-@@ -614,6 +614,13 @@
++++ b/gcc/llvm-internal.h	Wed Aug 10 10:51:59 2011 -0700
+@@ -611,6 +611,13 @@
    Value *EmitREAL_CST(tree_node *exp);
    Value *EmitCONSTRUCTOR(tree_node *exp, const MemRef *DestLoc);
  

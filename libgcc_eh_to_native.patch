@@ -1,8 +1,8 @@
 Move libgcc_eh back to native code
 
-diff -r 5868d5c7fc1e -r 44d1ff197f9f gcc/pnacl-unwind.h
+diff -r 463be79182ca gcc/pnacl-unwind.h
 --- a/gcc/pnacl-unwind.h	Thu Jun 30 16:53:18 2011 -0400
-+++ b/gcc/pnacl-unwind.h	Fri Jul 29 15:31:59 2011 -0700
++++ b/gcc/pnacl-unwind.h	Wed Aug 10 10:52:20 2011 -0700
 @@ -20,11 +20,10 @@
     other places use PNACL_MAX_DWARF_FRAME_REGISTERS */
  #define  DWARF_FRAME_REGISTERS pnacl_unwind_dwarf_frame_registers()
@@ -20,9 +20,9 @@ diff -r 5868d5c7fc1e -r 44d1ff197f9f gcc/pnacl-unwind.h
 +extern void pnacl_unwind_init_dwarf_reg_size_table(unsigned char* table);
  
  #endif /* PNACL_UNWIND_H */
-diff -r 5868d5c7fc1e -r 44d1ff197f9f gcc/unwind-dw2.c
+diff -r 463be79182ca gcc/unwind-dw2.c
 --- a/gcc/unwind-dw2.c	Thu Jun 30 16:53:18 2011 -0400
-+++ b/gcc/unwind-dw2.c	Fri Jul 29 15:31:59 2011 -0700
++++ b/gcc/unwind-dw2.c	Wed Aug 10 10:52:20 2011 -0700
 @@ -326,6 +326,99 @@
  }
  /* @LOCALMOD-END */
