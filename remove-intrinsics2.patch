@@ -1,8 +1,11 @@
 # HG changeset patch
-# Parent 4d426be62ca73ce2fd92133472115cd9de0827c9
-diff -r 4d426be62ca7 -r 93a721c9e0ae gcc/builtins.def
---- a/gcc/builtins.def	Mon Aug 08 16:09:11 2011 -0700
-+++ b/gcc/builtins.def	Mon Aug 08 16:42:06 2011 -0700
+# User David Sehr <sehr@google.com>
+# Parent a79245eb2504ec027374f186a411f881811dd7c5
+Removed obsolete ELF start intrinsics and front end support.
+
+diff -r a79245eb2504 gcc/builtins.def
+--- a/gcc/builtins.def	Tue Aug 09 16:42:06 2011 -0700
++++ b/gcc/builtins.def	Wed Aug 10 11:41:08 2011 -0700
 @@ -773,7 +773,6 @@
    DEF_BUILTIN (ENUM, "__builtin_" NAME, BUILT_IN_NORMAL, TYPE, TYPE,	\
  	       false, false, true, ATTRS, false, true)
@@ -11,9 +14,9 @@ diff -r 4d426be62ca7 -r 93a721c9e0ae gcc/builtins.def
  DEF_NACL_BUILTIN(BUILT_IN_NACL_READ_TP, "nacl_read_tp", BT_FN_PTR, ATTR_NOTHROW_LIST)
  DEF_NACL_BUILTIN(BUILT_IN_NACL_SETJMP, "nacl_setjmp", BT_FN_INT_PTR, ATTR_NOTHROW_LIST)
  DEF_NACL_BUILTIN(BUILT_IN_NACL_LONGJMP, "nacl_longjmp", BT_FN_VOID_PTR_INT, ATTR_NORETURN_NOTHROW_LIST)
-diff -r 4d426be62ca7 -r 93a721c9e0ae gcc/llvm-internal.h
---- a/gcc/llvm-internal.h	Mon Aug 08 16:09:11 2011 -0700
-+++ b/gcc/llvm-internal.h	Mon Aug 08 16:42:06 2011 -0700
+diff -r a79245eb2504 gcc/llvm-internal.h
+--- a/gcc/llvm-internal.h	Tue Aug 09 16:42:06 2011 -0700
++++ b/gcc/llvm-internal.h	Wed Aug 10 11:41:08 2011 -0700
 @@ -616,7 +616,6 @@
  
    // @LOCALMOD-BEGIN
