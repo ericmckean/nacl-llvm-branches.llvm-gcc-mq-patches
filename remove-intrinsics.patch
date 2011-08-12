@@ -1,0 +1,42 @@
+# HG changeset patch
+# User David Sehr <sehr@google.com>
+# Parent 398a8463596f500734472a5710159f8a767cb7d3
+First step of removing obsolete ELF start intrinsics and front end support.
+
+diff -r 398a8463596f gcc/llvm-convert.cpp
+--- a/gcc/llvm-convert.cpp	Tue Aug 09 16:42:06 2011 -0700
++++ b/gcc/llvm-convert.cpp	Wed Aug 10 11:41:33 2011 -0700
+@@ -6314,10 +6314,6 @@
+ #endif  // FIXME: Should handle these GCC extensions eventually.
+ 
+   // @LOCALMOD-BEGIN
+-  case BUILT_IN_NACL_ELF_START:
+-    Result = EmitNaClElfStart(exp);
+-    return true;
+-
+   case BUILT_IN_NACL_SETJMP:
+     Result = EmitNaClSetjmp(exp);
+     return true;
+@@ -8223,22 +8219,6 @@
+ }
+ 
+ // @LOCALMOD-BEGIN
+-Value *TreeToLLVM::EmitNaClElfStart(tree_node *exp) {
+-  tree ArgList = TREE_OPERAND(exp, 1);
+-
+-  if (!validate_arglist(ArgList, POINTER_TYPE, VOID_TYPE)) {
+-    error("`__builtin_nacl_elf_start' should take pointer");
+-  }
+-
+-  Value *NaClStartFunc = Emit(TREE_VALUE(ArgList), 0);
+-  NaClStartFunc = BitCastToType(NaClStartFunc, Type::getInt8PtrTy(Context));
+-
+-  Builder.CreateCall(Intrinsic::getDeclaration(TheModule,
+-                                               Intrinsic::nacl_elf_start),
+-                     NaClStartFunc);
+-  return 0;
+-}
+-
+ Value *TreeToLLVM::EmitNaClSetjmp(tree_node *exp) {
+   tree ArgList = TREE_OPERAND(exp, 1);
+ 
