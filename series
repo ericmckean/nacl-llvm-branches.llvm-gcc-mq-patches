@@ -13,3 +13,4 @@ llvm-gcc-0011-85-4143147bce3bcc5f13e84d34a976b37b516dad0a.patch
 libgcc_eh_to_native.patch
 remove-intrinsics.patch
 remove-intrinsics2.patch
+anon-struct-llvm-type.patch

@@ -1,0 +1,71 @@
+# HG changeset patch
+# Parent 69e7502674dd5e1e6ff8df68e55f32f1e8500751
+# User David Meyer <pdox@google.com>
+Hack to fix structure uniquness problem in llvm-gcc
+
+http://codereview.chromium.org/7648027/diff/2001/llvm-gcc/gcc/llvm-types.cpp
+
+diff -r 69e7502674dd gcc/llvm-types.cpp
+--- a/gcc/llvm-types.cpp	Mon Aug 15 13:00:17 2011 -0700
++++ b/gcc/llvm-types.cpp	Mon Aug 15 13:20:05 2011 -0700
+@@ -1122,7 +1122,14 @@
+     // Empty struct is not packed unless packed is set.
+     STy->setBody(Elements, Packed || (!Elements.empty() && AllBitFields));
+   }
+-  
++
++  // @LOCALMOD-BEGIN
++  StructType *getLLVMType() const {
++    return  StructType::get(Context, Elements,
++                            Packed || (!Elements.empty() && AllBitFields));
++  }
++  // @LOCALMOD-END
++
+   /// getAlignmentAsLLVMStruct - Return the alignment of this struct if it were
+   /// converted to an LLVM type.
+   uint64_t getAlignmentAsLLVMStruct() const {
+@@ -1945,6 +1952,7 @@
+ // has the correct size and layout for that usage.
+ Type *TypeConverter::ConvertRECORD(tree type, tree orig_type) {
+   bool IsStruct = TREE_CODE(type) == RECORD_TYPE;
++  bool IsAnonymousStruct = false; // @LOCALMOD
+   if (StructType *Ty = cast_or_null<StructType>(GET_TYPE_LLVM(type))) {
+     // If we already compiled this type, and if it was not a forward
+     // definition that is now defined, use the old type.
+@@ -1953,8 +1961,12 @@
+   } else {
+     // If we have no type for this, set it as an opaque named struct and
+     // continue.
+-    SET_TYPE_LLVM(type, StructType::createNamed(Context,
+-                    GetTypeName(IsStruct ? "struct." : "union.", orig_type)));
++    // @LOCALMOD-BEGIN
++    std::string typeName =
++        GetTypeName(IsStruct ? "struct." : "union.", orig_type);
++    IsAnonymousStruct = (typeName == "struct.anon");
++    SET_TYPE_LLVM(type, StructType::createNamed(Context, typeName));
++    // @LOCALMOD-END
+   }
+ 
+   // If we have a forward declaration, we're done.  Return the opaque type.
+@@ -2105,8 +2117,19 @@
+   if (IsStruct)
+     RestoreOriginalFields(type);
+ 
+-  StructType *ResultTy = cast<StructType>(GET_TYPE_LLVM(type));
+-  Info->fillInLLVMType((StructType*)ResultTy);
++  // @LOCALMOD-BEGIN
++  // If this is an anonymous type, switch to using an unnamed literal
++  // StructType. This forces the type to be uniqued structurally
++  // instead of by name/id.
++  StructType *ResultTy;
++  if (IsAnonymousStruct) {
++    ResultTy = Info->getLLVMType();
++    SET_TYPE_LLVM(type, ResultTy);
++  } else {
++    ResultTy = cast<StructType>(GET_TYPE_LLVM(type));
++    Info->fillInLLVMType((StructType*)ResultTy);
++  }
++  // @LOCALMOD-END
+   StructTypeInfoMap[type] = Info;
+   
+   RecursionStatus = OldRecursionStatus;
